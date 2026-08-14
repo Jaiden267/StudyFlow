@@ -1,0 +1,478 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap');
+
+@import 'tailwindcss';
+
+@theme inline {
+  /* Palette */
+  --color-indigo-50: #eef2ff;
+  --color-indigo-100: #e0e7ff;
+  --color-indigo-200: #c7d2fe;
+  --color-indigo-300: #a5b4fc;
+  --color-indigo-400: #818cf8;
+  --color-indigo-500: #6366f1;
+  --color-indigo-600: #4f46e5;
+  --color-indigo-700: #4338ca;
+  --color-indigo-800: #3730a3;
+  --color-indigo-900: #312e81;
+
+  /* Semantic tokens */
+  --color-background: #f5f6fa;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+
+  --color-primary: #3730a3;
+  --color-primary-hover: #312e81;
+  --color-primary-light: #e0e7ff;
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: #7c3aed;
+  --color-secondary-hover: #6d28d9;
+  --color-secondary-light: #ede9fe;
+  --color-secondary-foreground: #ffffff;
+
+  --color-success: #16a34a;
+  --color-success-light: #dcfce7;
+  --color-success-foreground: #14532d;
+
+  --color-warning: #d97706;
+  --color-warning-light: #fef3c7;
+  --color-warning-foreground: #78350f;
+
+  --color-error: #dc2626;
+  --color-error-light: #fee2e2;
+  --color-error-foreground: #7f1d1d;
+
+  --color-border: #e2e5ef;
+  --color-border-strong: #c7cce0;
+
+  --color-text-primary: #1a1d2e;
+  --color-text-secondary: #4b5280;
+  --color-text-muted: #8b91af;
+  --color-text-inverse: #ffffff;
+
+  /* Typography */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', monospace;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px 0 rgba(55, 48, 163, 0.06), 0 1px 2px -1px rgba(55, 48, 163, 0.04);
+  --shadow-card-hover: 0 4px 12px 0 rgba(55, 48, 163, 0.10), 0 2px 4px -1px rgba(55, 48, 163, 0.06);
+  --shadow-dropdown: 0 8px 24px 0 rgba(26, 29, 46, 0.12), 0 2px 8px -2px rgba(26, 29, 46, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(55, 48, 163, 0.18);
+}
+
+/* Spinner animation */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Base */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-full);
+}
+
+/* Focus visible */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Selection */
+::selection {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+/* ── Mobile landing page — responsive overrides (≤ 640 px) ────────────────── */
+@media (max-width: 640px) {
+
+  /* Root overflow guard */
+  .sf-landing {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  /* ── Nav ─────────────────────────────────────────────────────────────── */
+
+  /* Reduce nav inner padding */
+  .sf-nav-inner {
+    padding-left: 1.125rem !important;
+    padding-right: 1.125rem !important;
+  }
+
+  /* Show hamburger, hide desktop auth */
+  .sf-hamburger {
+    display: flex !important;
+  }
+  .sf-desktop-auth {
+    display: none !important;
+  }
+
+  /* ── Section containers ──────────────────────────────────────────────── */
+
+  /* Narrow the horizontal padding on all max-w containers */
+  .sf-landing .max-w-\[1280px\] {
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+  }
+
+  /* Reduce section vertical breathing room */
+  .sf-landing section {
+    padding-top: 56px !important;
+    padding-bottom: 56px !important;
+  }
+
+  /* ── Typography ──────────────────────────────────────────────────────── */
+
+  /* Hero h1 */
+  .sf-landing h1 {
+    font-size: 2.125rem !important;
+    letter-spacing: -0.025em !important;
+    line-height: 1.15 !important;
+  }
+
+  /* Section h2 */
+  .sf-landing h2 {
+    font-size: 1.625rem !important;
+    line-height: 1.25 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  /* Body copy — ensure ≥ 16 px */
+  .sf-landing p {
+    font-size: 1rem !important;
+    line-height: 1.65 !important;
+  }
+
+  /* Section eyebrow labels stay small intentionally */
+
+  /* ── Grids → single column ───────────────────────────────────────────── */
+
+  /* Standard 3-column grids */
+  .sf-landing .grid-cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 2-column grids */
+  .sf-landing .grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Arbitrary-value grids (hero 2-col, footer 4-col, etc.) */
+  .sf-landing [class*="grid-cols-["] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Reduce large gaps on collapsed grids */
+  .sf-landing .gap-16 { gap: 1.5rem !important; }
+  .sf-landing .gap-12 { gap: 1.25rem !important; }
+  .sf-landing .gap-10 { gap: 1.25rem !important; }
+  .sf-landing .gap-8  { gap: 1rem !important; }
+  .sf-landing .gap-6  { gap: 0.875rem !important; }
+
+  /* ── Hero ────────────────────────────────────────────────────────────── */
+
+  /* Push hero top padding down for fixed nav */
+  .sf-landing section:first-of-type {
+    padding-top: 96px !important;
+    padding-bottom: 48px !important;
+  }
+
+  /* Hero CTA row — stack vertically */
+  .sf-landing .sf-hero-ctas {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .sf-landing .sf-hero-ctas > * {
+    width: 100% !important;
+    justify-content: center !important;
+    min-height: 52px !important;
+  }
+
+  /* Hero trust badges row — allow wrapping */
+  .sf-landing .sf-hero-badges {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+
+  /* Dashboard preview inside hero — scale down to fit without horizontal scroll */
+  .sf-landing .sf-hero-preview {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    border-radius: var(--radius-lg) !important;
+    /* Hide the floating absolute cards on mobile so they don't cause overflow */
+    position: relative !important;
+  }
+  /* Hide the two absolute floating cards (z-10 popups) on mobile */
+  .sf-landing .sf-hero-preview > .absolute {
+    display: none !important;
+  }
+  /* Scale the browser chrome mock to fill mobile width */
+  .sf-landing .sf-hero-preview > *:not(.absolute) {
+    transform-origin: top left !important;
+  }
+
+  /* ── How It Works ────────────────────────────────────────────────────── */
+
+  /* Hide horizontal connector — makes no sense in 1-col layout */
+  .sf-hiw-connector {
+    display: none !important;
+  }
+
+  /* Steps: left-align instead of centred */
+  .sf-landing .grid-cols-3 > * {
+    align-items: flex-start !important;
+    text-align: left !important;
+  }
+
+  /* ── Dashboard showcase ──────────────────────────────────────────────── */
+
+  /* Remove annotation padding and hide absolute annotations */
+  .sf-showcase-wrap {
+    padding: 0 !important;
+  }
+  /* Hide annotation labels on mobile */
+  .sf-showcase-wrap > *:not(:last-child) {
+    display: none !important;
+  }
+
+  /* Scale the large showcase screenshot to fit */
+  .sf-showcase-wrap > *:last-child {
+    overflow: hidden !important;
+    border-radius: var(--radius-lg) !important;
+  }
+
+  /* ── Touch targets ───────────────────────────────────────────────────── */
+
+  /* All interactive elements: minimum 44 px tap target */
+  .sf-landing button,
+  .sf-landing a {
+    min-height: 44px;
+  }
+
+  /* Pricing cards — full width, slightly reduce inner padding */
+  .sf-landing .grid-cols-3 > div[class*="rounded"] {
+    width: 100% !important;
+  }
+
+  /* ── Footer ──────────────────────────────────────────────────────────── */
+
+  /* Footer bottom row */
+  .sf-landing footer .flex.items-center.justify-between {
+    flex-direction: column !important;
+    gap: 16px !important;
+    text-align: center !important;
+  }
+
+  /* Footer brand column spacing */
+  .sf-landing footer .max-w-\[1280px\] {
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+  }
+
+  /* ── Miscellaneous ───────────────────────────────────────────────────── */
+
+  /* Testimonial portfolio notice: allow wrapping */
+  .sf-landing .w-fit {
+    width: 100% !important;
+  }
+
+  /* Max-width prose blocks: full width on mobile */
+  .sf-landing .max-w-xl,
+  .sf-landing .max-w-2xl {
+    max-width: 100% !important;
+  }
+
+  /* FAQ section items */
+  .sf-landing .sf-faq-item {
+    font-size: 1rem !important;
+  }
+}
+
+/* ── Mobile dashboard — responsive overrides (≤ 640 px) ───────────────────────── */
+@media (max-width: 640px) {
+
+  /* Hide desktop sidebar */
+  .sf-dash .sf-dash-sidebar {
+    display: none !important;
+  }
+
+  /* Show mobile bottom nav */
+  .sf-mobile-bottom-nav {
+    display: flex !important;
+  }
+
+  /* Content area: no extra padding on the flex wrapper itself */
+  .sf-dash-main {
+    padding-bottom: 0;
+  }
+
+  /* ── Dashboard header ──────────────────────────────────────────────────────── */
+
+  /* Reduce header horizontal padding */
+  .sf-dash-header {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    gap: 10px !important;
+  }
+
+  /* Hide search and "← Landing page" button */
+  .sf-dash-hdr-search {
+    display: none !important;
+  }
+  .sf-dash-header > button:last-child {
+    display: none !important;
+  }
+
+  /* ── Dashboard main content ────────────────────────────────────────────────── */
+
+  /* Reduce main content padding */
+  .sf-dash-content,
+  .sf-assign-main,
+  .sf-detail-main {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    padding-top: 1.25rem !important;
+    padding-bottom: 80px !important;
+  }
+
+  /* Stats grid: 2 columns on mobile */
+  .sf-dash-stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* Stat cards: compact on mobile */
+  .sf-dash-stats-grid > div {
+    padding: 14px !important;
+    gap: 12px !important;
+  }
+  .sf-dash-stats-grid .w-12 {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* Deadlines card: full width */
+  .sf-dash-deadlines {
+    margin-bottom: 1rem !important;
+  }
+
+  /* Hide desktop table, show mobile cards */
+  .sf-dash-deadline-table {
+    display: none !important;
+  }
+  .sf-dash-deadline-cards {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* Lower section: single column */
+  .sf-dash-lower {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Schedule scroll: contains horizontal scroll */
+  .sf-dash-schedule-scroll {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Reduce schedule outer padding */
+  .sf-dash-schedule-outer {
+    padding: 12px 12px !important;
+  }
+
+  /* ── Assignments page ──────────────────────────────────────────────────────── */
+
+  /* Hide header search */
+  .sf-assign-hdr-search {
+    display: none !important;
+  }
+
+  /* Hide header "Add Assignment" button (FAB replaces it) */
+  .sf-assign-hdr-add {
+    display: none !important;
+  }
+
+  /* Stats strip: 2 columns */
+  .sf-assign-stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* Toolbar: show filter button, hide desktop filters */
+  .sf-assign-filter-btn {
+    display: flex !important;
+  }
+  .sf-assign-filters {
+    display: none !important;
+  }
+
+  /* FAB: show on mobile */
+  .sf-assign-fab {
+    display: flex !important;
+  }
+
+
+  /* ── Add Assignment modal → full-screen on mobile ─────────────────────────── */
+
+  /* Remove centering padding */
+  [role="dialog"][aria-label="Add assignment"] {
+    padding: 0 !important;
+    align-items: flex-end !important;
+    justify-content: stretch !important;
+  }
+
+  .sf-modal-panel {
+    max-width: 100% !important;
+    max-height: 96vh !important;
+    border-radius: 20px 20px 0 0 !important;
+  }
+
+  /* ── Assignment Detail two-column → single column ─────────────────────────── */
+
+  .sf-detail-two-col {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Detail hero card: compact padding on mobile */
+  .sf-detail-main > div:first-child > div:last-child {
+    padding: 16px !important;
+  }
+}

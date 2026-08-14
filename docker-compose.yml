@@ -1,0 +1,34 @@
+name: studyflow
+services:
+  pocketbase:
+    build:
+      context: ./pocketbase
+      args:
+        PB_VERSION: "0.39.10"
+    container_name: studyflow-pocketbase
+    restart: unless-stopped
+    environment:
+      PB_ENCRYPTION_KEY: ${PB_ENCRYPTION_KEY}
+    volumes:
+      - /DATA/AppData/studyflow/pb_data:/pb/pb_data
+      - /DATA/AppData/studyflow/pb_backups:/pb/pb_data/backups
+    ports:
+      - "127.0.0.1:8090:8090"
+    networks: [studyflow]
+    security_opt: [no-new-privileges:true]
+
+  web:
+    build: .
+    container_name: studyflow-web
+    restart: unless-stopped
+    depends_on:
+      pocketbase:
+        condition: service_healthy
+    ports:
+      - "8085:80"
+    networks: [studyflow]
+    security_opt: [no-new-privileges:true]
+
+networks:
+  studyflow:
+    name: studyflow-network

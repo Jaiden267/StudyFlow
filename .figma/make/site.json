@@ -1,0 +1,10 @@
+{
+  "description": "Helps university students organize assignments, manage deadlines, plan study sessions, and track academic progress for improved productivity.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

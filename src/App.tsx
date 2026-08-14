@@ -1,0 +1,5808 @@
+import { useEffect, useMemo, useState } from 'react'
+import React from 'react'
+import {
+  addTask,
+  confirmPasswordReset,
+  createAssignment as createAssignmentRecord,
+  createStudySession,
+  deleteAssignment as deleteAssignmentRecord,
+  deleteCurrentUser,
+  getAssignment as fetchAssignment,
+  getAuth,
+  isLoggedIn,
+  listAssignments as fetchAssignments,
+  listStudySessions,
+  listTasks,
+  login,
+  logout,
+  readableApiError,
+  refreshAuth,
+  register,
+  requestPasswordReset,
+  updateAssignment as updateAssignmentRecord,
+  updateCurrentUser,
+  updateStudySession,
+  updateTask,
+  type AssignmentRecord,
+  type AssignmentTaskRecord,
+  type StudySessionRecord,
+} from './api'
+
+type Page = 'landing' | 'login' | 'register' | 'reset-password' | 'dashboard' | 'assignments-page' | 'assignment-detail' | 'planner' | 'timer' | 'analytics' | 'calendar' | 'settings'
+
+
+// ─── Icon primitive ───────────────────────────────────────────────────────────
+function Icon({ children, size = 18 }: { children: React.ReactNode; size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {children}
+    </svg>
+  )
+}
+
+const Icons = {
+  home: <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></>,
+  tasks: <><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>,
+  calendar: <><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>,
+  chart: <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></>,
+  book: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></>,
+  bell: <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></>,
+  check: <polyline points="20 6 9 17 4 12" />,
+  clock: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>,
+  alert: <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></>,
+  user: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>,
+  chevronDown: <polyline points="6 9 12 15 18 9" />,
+  arrowRight: <><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></>,
+  play: <><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></>,
+  sparkle: <><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" /></>,
+  zap: <><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></>,
+  layers: <><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></>,
+}
+
+// ─── Button ───────────────────────────────────────────────────────────────────
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'
+type ButtonSize = 'sm' | 'md' | 'lg'
+
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant
+  size?: ButtonSize
+  icon?: React.ReactNode
+  iconPosition?: 'left' | 'right'
+}
+
+function Button({
+  variant = 'primary',
+  size = 'md',
+  icon,
+  iconPosition = 'left',
+  children,
+  className = '',
+  ...props
+}: ButtonProps) {
+  const base =
+    'inline-flex items-center justify-center gap-2 font-medium transition-all duration-150 cursor-pointer select-none focus-visible:outline-none'
+
+  const variants: Record<ButtonVariant, string> = {
+    primary:
+      'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] active:scale-[0.98] shadow-sm',
+    secondary:
+      'bg-[var(--color-secondary)] text-white hover:bg-[var(--color-secondary-hover)] active:scale-[0.98] shadow-sm',
+    outline:
+      'bg-white text-[var(--color-primary)] border border-[var(--color-primary)] hover:bg-[var(--color-primary-light)] active:scale-[0.98]',
+    ghost:
+      'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] hover:text-[var(--color-text-primary)] active:scale-[0.98]',
+    danger:
+      'bg-[var(--color-error)] text-white hover:opacity-90 active:scale-[0.98] shadow-sm',
+  }
+
+  const sizes: Record<ButtonSize, string> = {
+    sm: 'h-8 px-3 text-xs rounded-[var(--radius-sm)]',
+    md: 'h-10 px-4 text-sm rounded-[var(--radius-md)]',
+    lg: 'h-12 px-6 text-base rounded-[var(--radius-lg)]',
+  }
+
+  return (
+    <button
+      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+      {...props}
+    >
+      {icon && iconPosition === 'left' && <span className="shrink-0">{icon}</span>}
+      {children && <span>{children}</span>}
+      {icon && iconPosition === 'right' && <span className="shrink-0">{icon}</span>}
+    </button>
+  )
+}
+
+// ─── Status Label ─────────────────────────────────────────────────────────────
+type StatusVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'primary'
+
+function StatusLabel({
+  variant,
+  children,
+  dot = false,
+}: {
+  variant: StatusVariant
+  children: React.ReactNode
+  dot?: boolean
+}) {
+  const styles: Record<StatusVariant, string> = {
+    success: 'bg-[var(--color-success-light)] text-[var(--color-success-foreground)]',
+    warning: 'bg-[var(--color-warning-light)] text-[var(--color-warning-foreground)]',
+    error: 'bg-[var(--color-error-light)] text-[var(--color-error-foreground)]',
+    info: 'bg-[var(--color-secondary-light)] text-[var(--color-secondary)]',
+    neutral: 'bg-[var(--color-border)] text-[var(--color-text-secondary)]',
+    primary: 'bg-[var(--color-primary-light)] text-[var(--color-primary)]',
+  }
+  const dotColors: Record<StatusVariant, string> = {
+    success: 'bg-[var(--color-success)]',
+    warning: 'bg-[var(--color-warning)]',
+    error: 'bg-[var(--color-error)]',
+    info: 'bg-[var(--color-secondary)]',
+    neutral: 'bg-[var(--color-text-muted)]',
+    primary: 'bg-[var(--color-primary)]',
+  }
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${styles[variant]}`}>
+      {dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColors[variant]}`} />}
+      {children}
+    </span>
+  )
+}
+
+// ─── Landing Nav ─────────────────────────────────────────────────────────────
+function LandingNav({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const [scrolled] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const links: { label: string; href: string }[] = [
+    { label: 'Home', href: '#hero' },
+    { label: 'Features', href: '#features' },
+    { label: 'How It Works', href: '#how-it-works' },
+    { label: 'Pricing', href: '#pricing' },
+    { label: 'FAQ', href: '#faq' },
+  ]
+
+  return (
+    <>
+      <header
+        className="fixed top-0 left-0 right-0 z-50 transition-all duration-200"
+        style={{
+          background: scrolled ? 'rgba(255,255,255,0.97)' : 'rgba(255,255,255,0.92)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: '1px solid var(--color-border)',
+          boxShadow: scrolled ? 'var(--shadow-card)' : 'none',
+        }}
+      >
+        <div className="max-w-[1280px] mx-auto sf-nav-inner h-16 flex items-center justify-between gap-8">
+
+          {/* Logo */}
+          <a href="#" className="flex items-center gap-2.5 shrink-0 no-underline">
+            <div
+              className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" fill="white" />
+                <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                <path d="M2 12l10 5 10-5" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </div>
+            <span
+              className="text-[var(--color-text-primary)]"
+              style={{ fontSize: '1rem', fontWeight: 700, letterSpacing: '-0.01em' }}
+            >
+              StudyFlow
+            </span>
+          </a>
+
+          {/* Desktop nav links */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {links.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                className="px-3.5 py-2 rounded-[var(--radius-md)] text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)] transition-all duration-150 no-underline"
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
+
+          {/* Right side: desktop auth + mobile hamburger */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Desktop auth buttons */}
+            <div className="sf-desktop-auth flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => onNavigate('login')}>Log In</Button>
+              <Button variant="primary" size="sm" icon={<Icon size={13}>{Icons.arrowRight}</Icon>} iconPosition="right" onClick={() => onNavigate('register')}>
+                Get Started
+              </Button>
+            </div>
+
+            {/* Mobile hamburger — hidden on lg */}
+            <button
+              className="sf-hamburger lg:hidden"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open navigation menu"
+              aria-expanded={menuOpen}
+              style={{
+                display: 'none', // overridden in CSS for mobile
+                width: '40px', height: '40px',
+                alignItems: 'center', justifyContent: 'center',
+                background: 'none', border: '1.5px solid var(--color-border)',
+                borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile nav overlay */}
+      {menuOpen && (
+        <div
+          className="sf-mobile-nav fixed inset-0 z-[60]"
+          style={{ background: 'rgba(15,16,33,0.55)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setMenuOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute', top: 0, left: 0, right: 0,
+              background: 'white',
+              borderBottomLeftRadius: 'var(--radius-xl)',
+              borderBottomRightRadius: 'var(--radius-xl)',
+              boxShadow: '0 16px 48px rgba(55,48,163,0.16)',
+              paddingBottom: '28px',
+            }}
+          >
+            {/* Overlay header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" fill="white" />
+                    <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M2 12l10 5 10-5" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>StudyFlow</span>
+              </div>
+              <button
+                onClick={() => setMenuOpen(false)}
+                aria-label="Close navigation menu"
+                style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-sm)', background: 'var(--color-background)', border: '1.5px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--color-text-secondary)' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+
+            {/* Nav links */}
+            <nav style={{ padding: '12px 12px 0' }}>
+              {links.map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 12px', borderRadius: 'var(--radius-md)',
+                    fontSize: '1rem', fontWeight: 600, color: 'var(--color-text-primary)',
+                    textDecoration: 'none', marginBottom: '2px',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-background)' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                >
+                  {link.label}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+                </a>
+              ))}
+            </nav>
+
+            {/* CTA buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '16px 24px 0' }}>
+              <button
+                onClick={() => { setMenuOpen(false); onNavigate('register') }}
+                style={{
+                  width: '100%', height: '50px', borderRadius: 'var(--radius-md)', border: 'none',
+                  background: 'var(--color-primary)', color: 'white',
+                  fontSize: '1rem', fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.01em',
+                }}
+              >
+                Start for Free
+              </button>
+              <button
+                onClick={() => { setMenuOpen(false); onNavigate('login') }}
+                style={{
+                  width: '100%', height: '50px', borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-background)', border: '1.5px solid var(--color-border)',
+                  color: 'var(--color-text-secondary)', fontSize: '1rem', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Log In
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ─── Dashboard Preview (browser-chrome mock) ─────────────────────────────────
+function DashboardPreview() {
+  const deadlines = [
+    { course: 'COMP3900', title: 'Sprint 3 Report', due: 'Tomorrow', pct: 75, status: 'warning' as StatusVariant, color: '#7c3aed' },
+    { course: 'MATH2501', title: 'Problem Set 8', due: 'In 3 days', pct: 40, status: 'primary' as StatusVariant, color: '#3730a3' },
+    { course: 'PSYC1001', title: 'Research Reflection', due: 'In 5 days', pct: 0, status: 'neutral' as StatusVariant, color: '#16a34a' },
+    { course: 'HIST2202', title: 'Essay Draft', due: 'In 7 days', pct: 20, status: 'neutral' as StatusVariant, color: '#d97706' },
+  ]
+
+  const schedule = [
+    { day: 'Mon', blocks: [{ label: 'COMP3900', color: '#7c3aed', start: 0, len: 2 }, { label: 'Study', color: '#3730a3', start: 3, len: 1.5 }] },
+    { day: 'Tue', blocks: [{ label: 'MATH2501', color: '#3730a3', start: 1, len: 1.5 }, { label: 'PSYC1001', color: '#16a34a', start: 4, len: 1 }] },
+    { day: 'Wed', blocks: [{ label: 'HIST2202', color: '#d97706', start: 0.5, len: 2 }, { label: 'Study', color: '#3730a3', start: 3.5, len: 1 }] },
+    { day: 'Thu', blocks: [{ label: 'COMP3900', color: '#7c3aed', start: 1, len: 2 }] },
+    { day: 'Fri', blocks: [{ label: 'MATH2501', color: '#3730a3', start: 0, len: 1.5 }, { label: 'Review', color: '#16a34a', start: 3, len: 2 }] },
+  ]
+
+  const GRID_H = 88 // px total height of schedule grid
+  const SLOTS = 5  // time slots shown
+
+  return (
+    <div
+      className="rounded-[var(--radius-xl)] overflow-hidden"
+      style={{
+        boxShadow: '0 32px 80px rgba(55, 48, 163, 0.18), 0 8px 24px rgba(55, 48, 163, 0.10)',
+        border: '1px solid var(--color-border)',
+      }}
+    >
+      {/* Browser chrome */}
+      <div
+        className="flex items-center gap-3 px-4 py-3"
+        style={{ background: '#f0f1f5', borderBottom: '1px solid #dde0ee' }}
+      >
+        {/* Traffic lights */}
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-[#fc5f5a]" />
+          <div className="w-3 h-3 rounded-full bg-[#fdbc40]" />
+          <div className="w-3 h-3 rounded-full bg-[#34c84a]" />
+        </div>
+        {/* URL bar */}
+        <div
+          className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-[6px] text-xs"
+          style={{ background: 'white', border: '1px solid #dde0ee', color: '#8b91af', fontFamily: 'var(--font-mono)' }}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          app.studyflow.io/dashboard
+        </div>
+      </div>
+
+      {/* App body */}
+      <div className="flex" style={{ background: '#f5f6fa', height: '460px' }}>
+
+        {/* Mini sidebar */}
+        <div
+          className="flex flex-col py-4 gap-1"
+          style={{ width: '52px', background: 'white', borderRight: '1px solid var(--color-border)', alignItems: 'center' }}
+        >
+          {/* Logo dot */}
+          <div
+            className="w-7 h-7 rounded-[6px] mb-3 flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #3730a3 0%, #7c3aed 100%)' }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" fill="white" />
+              <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+            </svg>
+          </div>
+          {[
+            { icon: Icons.home, active: true },
+            { icon: Icons.tasks, active: false },
+            { icon: Icons.calendar, active: false },
+            { icon: Icons.chart, active: false },
+            { icon: Icons.book, active: false },
+          ].map((item, i) => (
+            <div
+              key={i}
+              className="w-8 h-8 rounded-[6px] flex items-center justify-center"
+              style={{
+                background: item.active ? 'var(--color-primary)' : 'transparent',
+                color: item.active ? 'white' : 'var(--color-text-muted)',
+              }}
+            >
+              <Icon size={14}>{item.icon}</Icon>
+            </div>
+          ))}
+          {/* avatar at bottom */}
+          <div style={{ marginTop: 'auto' }}>
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-white"
+              style={{ background: 'linear-gradient(135deg, #818cf8, #7c3aed)', fontSize: '9px', fontWeight: 600 }}
+            >
+              JL
+            </div>
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1 overflow-hidden flex flex-col px-4 pt-4 pb-3 gap-3">
+
+          {/* Header row */}
+          <div className="flex items-center justify-between shrink-0">
+            <div>
+              <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 500 }}>Good morning, Jamie 👋</p>
+              <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>Dashboard</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div
+                className="h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] text-white"
+                style={{ background: 'var(--color-primary)', fontSize: '10px', fontWeight: 500 }}
+              >
+                <Icon size={10}>{Icons.zap}</Icon>
+                New
+              </div>
+            </div>
+          </div>
+
+          {/* Stat row */}
+          <div className="grid grid-cols-3 gap-2 shrink-0">
+            {[
+              { label: 'Assignments Due', value: '4', sub: 'This week', color: '#3730a3', bg: '#e0e7ff' },
+              { label: 'Study Hours', value: '12.5', sub: 'This week', color: '#7c3aed', bg: '#ede9fe' },
+              { label: 'Avg. Grade', value: '87%', sub: 'Semester 2', color: '#16a34a', bg: '#dcfce7' },
+            ].map((s) => (
+              <div
+                key={s.label}
+                className="rounded-[8px] px-3 py-2.5"
+                style={{ background: 'white', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <p style={{ fontSize: '9px', color: 'var(--color-text-muted)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</p>
+                </div>
+                <p style={{ fontSize: '18px', fontWeight: 700, color: s.color, letterSpacing: '-0.02em', lineHeight: 1 }}>{s.value}</p>
+                <p style={{ fontSize: '9px', color: 'var(--color-text-muted)', marginTop: '2px' }}>{s.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Lower two-column */}
+          <div className="flex gap-3 flex-1 min-h-0">
+
+            {/* Deadlines */}
+            <div
+              className="flex-1 rounded-[8px] p-3 flex flex-col min-h-0"
+              style={{ background: 'white', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+            >
+              <div className="flex items-center justify-between mb-2.5 shrink-0">
+                <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-text-primary)' }}>Upcoming Deadlines</p>
+                <p style={{ fontSize: '9px', color: 'var(--color-secondary)', fontWeight: 500 }}>View all</p>
+              </div>
+              <div className="flex flex-col gap-2 overflow-hidden">
+                {deadlines.map((d) => (
+                  <div key={d.title} className="flex items-center gap-2">
+                    <div className="w-1 rounded-full shrink-0" style={{ height: '32px', background: d.color }} />
+                    <div className="flex-1 min-w-0">
+                      <p style={{ fontSize: '9.5px', fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.title}</p>
+                      <p style={{ fontSize: '8.5px', color: 'var(--color-text-muted)' }}>{d.course}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p style={{ fontSize: '8.5px', fontWeight: 500, color: d.status === 'warning' ? 'var(--color-warning)' : 'var(--color-text-muted)' }}>{d.due}</p>
+                      {d.pct > 0 && (
+                        <div className="mt-0.5 w-14 h-1 rounded-full overflow-hidden" style={{ background: '#e2e5ef' }}>
+                          <div className="h-full rounded-full" style={{ width: `${d.pct}%`, background: d.color }} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Weekly schedule */}
+            <div
+              className="rounded-[8px] p-3 flex flex-col min-h-0"
+              style={{ width: '180px', background: 'white', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+            >
+              <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '8px' }}>Weekly Schedule</p>
+              <div className="flex gap-1 flex-1">
+                {schedule.map((col) => (
+                  <div key={col.day} className="flex-1 flex flex-col gap-0.5">
+                    <p style={{ fontSize: '8px', fontWeight: 600, color: 'var(--color-text-muted)', textAlign: 'center', marginBottom: '4px', textTransform: 'uppercase' }}>{col.day}</p>
+                    <div className="relative flex-1" style={{ height: `${GRID_H}px` }}>
+                      {/* grid lines */}
+                      {Array.from({ length: SLOTS }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="absolute w-full"
+                          style={{ top: `${(i / SLOTS) * 100}%`, borderTop: '1px dashed #e2e5ef' }}
+                        />
+                      ))}
+                      {col.blocks.map((b, bi) => (
+                        <div
+                          key={bi}
+                          className="absolute inset-x-0 rounded-[3px] flex items-start justify-center pt-0.5"
+                          style={{
+                            top: `${(b.start / SLOTS) * 100}%`,
+                            height: `${(b.len / SLOTS) * 100}%`,
+                            background: b.color + '22',
+                            borderLeft: `2px solid ${b.color}`,
+                          }}
+                        >
+                          <p style={{ fontSize: '6.5px', fontWeight: 600, color: b.color, lineHeight: 1.2, textAlign: 'center', padding: '0 1px', overflow: 'hidden' }}>{b.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Hero Section ─────────────────────────────────────────────────────────────
+function HeroSection({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  return (
+    <section
+      id="hero"
+      className="relative overflow-hidden"
+      style={{ paddingTop: '128px', paddingBottom: '96px', background: 'white' }}
+    >
+      {/* Soft background decoration */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute"
+        style={{
+          top: '-160px',
+          left: '-160px',
+          width: '720px',
+          height: '720px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(55,48,163,0.07) 0%, transparent 70%)',
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute"
+        style={{
+          top: '60px',
+          right: '-80px',
+          width: '480px',
+          height: '480px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(124,58,237,0.06) 0%, transparent 70%)',
+        }}
+      />
+
+      {/* Dot grid texture */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(55,48,163,0.10) 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+          maskImage: 'radial-gradient(ellipse 70% 80% at 15% 50%, black 30%, transparent 100%)',
+          WebkitMaskImage: 'radial-gradient(ellipse 70% 80% at 15% 50%, black 30%, transparent 100%)',
+        }}
+      />
+
+      <div className="relative max-w-[1280px] mx-auto px-8">
+        <div className="grid grid-cols-[1fr_1.1fr] gap-16 items-center">
+
+          {/* ── Left: Copy ── */}
+          <div>
+            {/* Pill badge */}
+            <div className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 rounded-full border border-[var(--color-primary-light)] bg-[var(--color-primary-light)]">
+              <span
+                className="w-1.5 h-1.5 rounded-full animate-pulse"
+                style={{ background: 'var(--color-secondary)' }}
+              />
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-primary)', letterSpacing: '0.01em' }}>
+                Built for university students
+              </span>
+            </div>
+
+            {/* Headline */}
+            <h1
+              style={{
+                fontSize: '3.25rem',
+                fontWeight: 800,
+                letterSpacing: '-0.03em',
+                lineHeight: 1.1,
+                color: 'var(--color-text-primary)',
+                marginBottom: '1.25rem',
+              }}
+            >
+              Stay organised.{' '}
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                Study smarter.
+              </span>
+            </h1>
+
+            {/* Supporting text */}
+            <p
+              style={{
+                fontSize: '1.0625rem',
+                color: 'var(--color-text-secondary)',
+                lineHeight: 1.7,
+                maxWidth: '460px',
+                marginBottom: '2.5rem',
+              }}
+            >
+              StudyFlow helps students manage assignments, prioritise deadlines,
+              plan focused study sessions, and track their academic progress —
+              all in one simple workspace.
+            </p>
+
+            {/* CTAs */}
+            <div className="sf-hero-ctas flex items-center gap-3 mb-8">
+              <Button
+                variant="primary"
+                size="lg"
+                icon={<Icon size={15}>{Icons.arrowRight}</Icon>}
+                iconPosition="right"
+                style={{ paddingLeft: '1.75rem', paddingRight: '1.75rem' }}
+                onClick={() => onNavigate('register')}
+              >
+                Start for Free
+              </Button>
+              <Button
+                variant="ghost"
+                size="lg"
+                icon={<Icon size={15}>{Icons.play}</Icon>}
+                iconPosition="left"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                View Demo
+              </Button>
+            </div>
+
+            {/* Trust indicators */}
+            <div className="sf-hero-badges flex items-center gap-5 flex-wrap">
+              {[
+                { icon: Icons.check, text: 'No credit card required' },
+                { icon: Icons.sparkle, text: 'Free student plan' },
+                { icon: Icons.zap, text: 'Set up in minutes' },
+              ].map((t) => (
+                <div key={t.text} className="flex items-center gap-2">
+                  <span
+                    className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: 'var(--color-success-light)', color: 'var(--color-success)' }}
+                  >
+                    <Icon size={10}>{t.icon}</Icon>
+                  </span>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+                    {t.text}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Right: Dashboard mock ── */}
+          <div className="sf-hero-preview relative">
+            {/* Floating status card — top left */}
+            <div
+              className="absolute z-10 flex items-center gap-2.5 px-3.5 py-2.5 rounded-[var(--radius-md)] border border-[var(--color-border)]"
+              style={{
+                top: '-20px',
+                left: '-24px',
+                background: 'white',
+                boxShadow: 'var(--shadow-dropdown)',
+                minWidth: '190px',
+              }}
+            >
+              <div
+                className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0"
+                style={{ background: 'var(--color-success-light)', color: 'var(--color-success)' }}
+              >
+                <Icon size={15}>{Icons.check}</Icon>
+              </div>
+              <div>
+                <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.3 }}>
+                  Assignment submitted
+                </p>
+                <p style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>COMP3900 · Just now</p>
+              </div>
+            </div>
+
+            {/* Floating progress card — bottom right */}
+            <div
+              className="absolute z-10 px-3.5 py-3 rounded-[var(--radius-md)] border border-[var(--color-border)]"
+              style={{
+                bottom: '-20px',
+                right: '-24px',
+                background: 'white',
+                boxShadow: 'var(--shadow-dropdown)',
+                minWidth: '172px',
+              }}
+            >
+              <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 500, marginBottom: '6px' }}>
+                Study streak
+              </p>
+              <div className="flex items-end gap-1 mb-2">
+                <p style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-primary)', lineHeight: 1, letterSpacing: '-0.03em' }}>14</p>
+                <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontWeight: 500, marginBottom: '2px' }}>days</p>
+              </div>
+              <div className="flex gap-1">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 h-1.5 rounded-full"
+                    style={{ background: i < 6 ? 'var(--color-secondary)' : 'var(--color-border)' }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <DashboardPreview />
+          </div>
+
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Problem Section ──────────────────────────────────────────────────────────
+function ProblemSection() {
+  const problems = [
+    {
+      icon: (
+        <>
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </>
+      ),
+      accent: 'var(--color-error)',
+      accentLight: 'var(--color-error-light)',
+      title: 'Missed deadlines',
+      description:
+        "Students lose track of assignments spread across different modules and platforms, leaving important work overlooked until it's too late.",
+    },
+    {
+      icon: (
+        <>
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </>
+      ),
+      accent: 'var(--color-warning)',
+      accentLight: 'var(--color-warning-light)',
+      title: 'Poor time management',
+      description:
+        'Large assignments are often left until the last minute. Without a plan, students underestimate how long tasks really take.',
+    },
+    {
+      icon: (
+        <>
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </>
+      ),
+      accent: 'var(--color-secondary)',
+      accentLight: 'var(--color-secondary-light)',
+      title: 'No clear overview',
+      description:
+        "Students struggle to understand what needs attention first when priorities are scattered and there's no single source of truth.",
+    },
+  ]
+
+  return (
+    <section
+      style={{
+        background: 'var(--color-background)',
+        borderTop: '1px solid var(--color-border)',
+        padding: '96px 0',
+      }}
+    >
+      <div className="max-w-[1280px] mx-auto px-8">
+        {/* Section heading */}
+        <div className="max-w-xl mb-14">
+          <p
+            style={{
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--color-error)',
+              marginBottom: '12px',
+            }}
+          >
+            The challenge
+          </p>
+          <h2
+            style={{
+              fontSize: '2rem',
+              fontWeight: 700,
+              letterSpacing: '-0.025em',
+              lineHeight: 1.2,
+              color: 'var(--color-text-primary)',
+              marginBottom: '16px',
+            }}
+          >
+            University life can become overwhelming
+          </h2>
+          <p
+            style={{
+              fontSize: '1rem',
+              color: 'var(--color-text-secondary)',
+              lineHeight: 1.7,
+            }}
+          >
+            Juggling lectures, assignments, and deadlines across multiple modules is harder than it looks. Most students don't fail through lack of effort — they fail through lack of organisation.
+          </p>
+        </div>
+
+        {/* Problem cards */}
+        <div className="grid grid-cols-3 gap-6">
+          {problems.map((p) => (
+            <div
+              key={p.title}
+              className="flex flex-col gap-5 p-7 rounded-[var(--radius-lg)] bg-white"
+              style={{
+                border: '1px solid var(--color-border)',
+                boxShadow: 'var(--shadow-card)',
+              }}
+            >
+              {/* Icon */}
+              <div
+                className="w-11 h-11 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+                style={{ background: p.accentLight, color: p.accent }}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  {p.icon}
+                </svg>
+              </div>
+
+              {/* Text */}
+              <div>
+                <h3
+                  style={{
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    color: 'var(--color-text-primary)',
+                    marginBottom: '8px',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {p.title}
+                </h3>
+                <p
+                  style={{
+                    fontSize: '0.9rem',
+                    color: 'var(--color-text-secondary)',
+                    lineHeight: 1.65,
+                  }}
+                >
+                  {p.description}
+                </p>
+              </div>
+
+              {/* Accent rule */}
+              <div
+                className="mt-auto h-0.5 rounded-full w-10"
+                style={{ background: p.accent, opacity: 0.5 }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Features Section ─────────────────────────────────────────────────────────
+function FeaturesSection() {
+  const features = [
+    {
+      icon: (
+        <>
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </>
+      ),
+      color: 'var(--color-primary)',
+      colorLight: 'var(--color-primary-light)',
+      title: 'Assignment Management',
+      description: 'Add assignments, modules, deadlines, priorities, and track progress as you work toward completion.',
+    },
+    {
+      icon: (
+        <>
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </>
+      ),
+      color: 'var(--color-secondary)',
+      colorLight: 'var(--color-secondary-light)',
+      title: 'Smart Deadline Dashboard',
+      description: 'View upcoming, overdue, and completed work in one prioritised place — nothing slips through.',
+    },
+    {
+      icon: (
+        <>
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </>
+      ),
+      color: '#0891b2',
+      colorLight: '#e0f7fa',
+      title: 'Study Planner',
+      description: 'Break large assignments into manageable study sessions spread across your available time.',
+    },
+    {
+      icon: (
+        <>
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </>
+      ),
+      color: 'var(--color-warning)',
+      colorLight: 'var(--color-warning-light)',
+      title: 'Focus Timer',
+      description: 'Use timed study sessions with planned breaks to maintain concentration and avoid burnout.',
+    },
+    {
+      icon: (
+        <>
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
+        </>
+      ),
+      color: 'var(--color-success)',
+      colorLight: 'var(--color-success-light)',
+      title: 'Progress Analytics',
+      description: 'Track completed work, study time, and weekly productivity to see your improvement over time.',
+    },
+    {
+      icon: (
+        <>
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </>
+      ),
+      color: '#db2777',
+      colorLight: '#fce7f3',
+      title: 'Deadline Reminders',
+      description: "Receive helpful, well-timed reminders before important work is due so you're never caught off guard.",
+    },
+  ]
+
+  return (
+    <section
+      style={{
+        background: 'white',
+        borderTop: '1px solid var(--color-border)',
+        padding: '96px 0 104px',
+      }}
+    >
+      <div className="max-w-[1280px] mx-auto px-8">
+        {/* Section heading — centred */}
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <p
+            style={{
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--color-primary)',
+              marginBottom: '12px',
+            }}
+          >
+            Features
+          </p>
+          <h2
+            style={{
+              fontSize: '2rem',
+              fontWeight: 700,
+              letterSpacing: '-0.025em',
+              lineHeight: 1.2,
+              color: 'var(--color-text-primary)',
+              marginBottom: '16px',
+            }}
+          >
+            Everything you need to stay on track
+          </h2>
+          <p
+            style={{
+              fontSize: '1rem',
+              color: 'var(--color-text-secondary)',
+              lineHeight: 1.7,
+            }}
+          >
+            StudyFlow brings together the tools students actually need — no complexity, no clutter. Just a focused workspace built around how academic life works.
+          </p>
+        </div>
+
+        {/* Feature grid — 3 columns */}
+        <div className="grid grid-cols-3 gap-6">
+          {features.map((f) => (
+            <div
+              key={f.title}
+              className="group flex flex-col gap-4 p-7 rounded-[var(--radius-lg)] bg-[var(--color-background)]"
+              style={{
+                border: '1px solid var(--color-border)',
+                transition: 'box-shadow 200ms, transform 200ms, background 200ms',
+              }}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget
+                el.style.boxShadow = 'var(--shadow-card-hover)'
+                el.style.transform = 'translateY(-2px)'
+                el.style.background = 'white'
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget
+                el.style.boxShadow = 'none'
+                el.style.transform = 'translateY(0)'
+                el.style.background = 'var(--color-background)'
+              }}
+            >
+              {/* Icon */}
+              <div
+                className="w-11 h-11 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+                style={{ background: f.colorLight, color: f.color }}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  {f.icon}
+                </svg>
+              </div>
+
+              {/* Text */}
+              <div>
+                <h3
+                  style={{
+                    fontSize: '0.9375rem',
+                    fontWeight: 600,
+                    color: 'var(--color-text-primary)',
+                    marginBottom: '8px',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {f.title}
+                </h3>
+                <p
+                  style={{
+                    fontSize: '0.875rem',
+                    color: 'var(--color-text-secondary)',
+                    lineHeight: 1.65,
+                  }}
+                >
+                  {f.description}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── How It Works ────────────────────────────────────────────────────────────
+function HowItWorksSection() {
+  const steps = [
+    {
+      n: '01',
+      color: 'var(--color-primary)',
+      colorLight: 'var(--color-primary-light)',
+      icon: (
+        <>
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </>
+      ),
+      title: 'Add your modules and assignments',
+      desc: 'Import or manually add every module, assignment, and deadline from across your university platforms into a single organised list.',
+    },
+    {
+      n: '02',
+      color: 'var(--color-secondary)',
+      colorLight: 'var(--color-secondary-light)',
+      icon: (
+        <>
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+          <line x1="8" y1="14" x2="12" y2="14" />
+        </>
+      ),
+      title: 'Plan your weekly study sessions',
+      desc: 'Use the study planner to schedule focused sessions across your week — breaking large tasks into achievable daily blocks.',
+    },
+    {
+      n: '03',
+      color: 'var(--color-success)',
+      colorLight: 'var(--color-success-light)',
+      icon: (
+        <>
+          <polyline points="20 6 9 17 4 12" />
+          <circle cx="12" cy="12" r="10" />
+        </>
+      ),
+      title: 'Complete work and monitor your progress',
+      desc: "Mark assignments as done, review your productivity trends, and stay motivated as your weekly progress score climbs.",
+    },
+  ]
+
+  return (
+    <section
+      style={{
+        background: 'var(--color-background)',
+        borderTop: '1px solid var(--color-border)',
+        padding: '96px 0 104px',
+      }}
+    >
+      <div className="max-w-[1280px] mx-auto px-8">
+        {/* Heading */}
+        <div className="text-center max-w-xl mx-auto mb-20">
+          <p
+            style={{
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--color-secondary)',
+              marginBottom: '12px',
+            }}
+          >
+            How it works
+          </p>
+          <h2
+            style={{
+              fontSize: '2rem',
+              fontWeight: 700,
+              letterSpacing: '-0.025em',
+              lineHeight: 1.2,
+              color: 'var(--color-text-primary)',
+            }}
+          >
+            How StudyFlow works
+          </h2>
+        </div>
+
+        {/* Steps — relative container so the connector line can be absolutely placed */}
+        <div className="relative grid grid-cols-3 gap-10">
+
+          {/* Connector line behind the step circles */}
+          <div
+            aria-hidden
+            className="absolute sf-hiw-connector"
+            style={{
+              top: '28px',
+              left: 'calc(16.666% + 28px)',
+              right: 'calc(16.666% + 28px)',
+              height: '1px',
+              background: 'linear-gradient(90deg, var(--color-primary-light), var(--color-secondary-light))',
+              borderTop: '1.5px dashed var(--color-border-strong)',
+            }}
+          />
+
+          {steps.map((s) => (
+            <div key={s.n} className="flex flex-col items-center text-center gap-6 relative">
+              {/* Circle with number + icon */}
+              <div className="relative">
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center"
+                  style={{
+                    background: 'white',
+                    border: `2px solid ${s.color}`,
+                    boxShadow: `0 0 0 6px ${s.colorLight}`,
+                    position: 'relative',
+                    zIndex: 1,
+                  }}
+                >
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={s.color}
+                    strokeWidth={1.75}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    {s.icon}
+                  </svg>
+                </div>
+                {/* Step number badge */}
+                <div
+                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
+                  style={{ background: s.color, zIndex: 2 }}
+                >
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: 'white', letterSpacing: '-0.01em' }}>
+                    {s.n.replace('0', '')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Large decorative number */}
+              <div
+                style={{
+                  fontSize: '4.5rem',
+                  fontWeight: 800,
+                  letterSpacing: '-0.05em',
+                  lineHeight: 1,
+                  color: s.colorLight,
+                  userSelect: 'none',
+                  marginTop: '-8px',
+                  marginBottom: '-16px',
+                }}
+              >
+                {s.n}
+              </div>
+
+              <div>
+                <h3
+                  style={{
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    color: 'var(--color-text-primary)',
+                    letterSpacing: '-0.01em',
+                    marginBottom: '10px',
+                  }}
+                >
+                  {s.title}
+                </h3>
+                <p
+                  style={{
+                    fontSize: '0.875rem',
+                    color: 'var(--color-text-secondary)',
+                    lineHeight: 1.7,
+                    maxWidth: '280px',
+                    margin: '0 auto',
+                  }}
+                >
+                  {s.desc}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Large Dashboard Preview Section ─────────────────────────────────────────
+function DashboardShowcaseSection() {
+  const deadlines = [
+    { course: 'COMP3900', label: 'Sprint 3 Report', due: 'Tomorrow', pct: 75, urgent: true, color: '#7c3aed' },
+    { course: 'MATH2501', label: 'Problem Set 8', due: 'In 3 days', pct: 40, urgent: false, color: '#3730a3' },
+    { course: 'PSYC1001', label: 'Research Reflection', due: 'In 5 days', pct: 15, urgent: false, color: '#16a34a' },
+    { course: 'HIST2202', label: 'Essay Draft', due: 'In 7 days', pct: 0, urgent: false, color: '#d97706' },
+    { course: 'COMP3900', label: 'Peer Review', due: 'In 9 days', pct: 0, urgent: false, color: '#7c3aed' },
+  ]
+
+  const assignments = [
+    { title: 'Sprint 3 Report', module: 'COMP3900', pct: 75, color: '#7c3aed', status: 'In Progress' },
+    { title: 'Problem Set 8', module: 'MATH2501', pct: 40, color: '#3730a3', status: 'In Progress' },
+    { title: 'Research Reflection', module: 'PSYC1001', pct: 15, color: '#16a34a', status: 'Started' },
+    { title: 'Lecture Summaries', module: 'HIST2202', pct: 100, color: '#16a34a', status: 'Submitted' },
+  ]
+
+  const schedule = [
+    { day: 'Mon', slots: [{ s: 0, l: 2, label: 'COMP3900', color: '#7c3aed' }, { s: 3, l: 1.5, label: 'Study', color: '#3730a3' }] },
+    { day: 'Tue', slots: [{ s: 1, l: 1.5, label: 'MATH2501', color: '#3730a3' }, { s: 3.5, l: 1, label: 'PSYC1001', color: '#16a34a' }] },
+    { day: 'Wed', slots: [{ s: 0.5, l: 2, label: 'HIST2202', color: '#d97706' }, { s: 3.5, l: 1, label: 'Study', color: '#3730a3' }] },
+    { day: 'Thu', slots: [{ s: 1, l: 2, label: 'COMP3900', color: '#7c3aed' }] },
+    { day: 'Fri', slots: [{ s: 0, l: 1.5, label: 'MATH2501', color: '#3730a3' }, { s: 3, l: 2, label: 'Review', color: '#16a34a' }] },
+  ]
+
+  const navItems = [
+    { icon: <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></>, label: 'Dashboard', active: true },
+    { icon: <><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>, label: 'Assignments', active: false, badge: 4 },
+    { icon: <><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>, label: 'Calendar', active: false },
+    { icon: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></>, label: 'Study Plan', active: false },
+    { icon: <><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></>, label: 'Progress', active: false },
+  ]
+
+  const SLOTS = 5
+  const GRID_H = 120
+
+  const stats = [
+    { label: 'Assignments Due', value: '4', sub: 'This week', color: '#3730a3', bg: '#e0e7ff' },
+    { label: 'Study Hours', value: '12.5h', sub: 'Logged this week', color: '#7c3aed', bg: '#ede9fe' },
+    { label: 'Avg. Grade', value: '87%', sub: 'Semester 2 GPA', color: '#16a34a', bg: '#dcfce7' },
+    { label: 'Study Streak', value: '14d', sub: 'Personal best', color: '#d97706', bg: '#fef3c7' },
+  ]
+
+  // Annotation helpers
+  const Annotation = ({
+    label,
+    style,
+    dir = 'right',
+  }: {
+    label: string
+    style: React.CSSProperties
+    dir?: 'right' | 'left' | 'up' | 'down'
+  }) => {
+    const lineStyles: Record<string, React.CSSProperties> = {
+      right: { width: '32px', height: '1px', background: 'var(--color-primary)', marginRight: '6px' },
+      left: { width: '32px', height: '1px', background: 'var(--color-primary)', marginLeft: '6px' },
+      up: { width: '1px', height: '24px', background: 'var(--color-primary)', marginBottom: '6px' },
+      down: { width: '1px', height: '24px', background: 'var(--color-primary)', marginTop: '6px' },
+    }
+    const isHoriz = dir === 'right' || dir === 'left'
+    return (
+      <div
+        className="absolute pointer-events-none"
+        style={{ zIndex: 20, ...style }}
+      >
+        <div
+          className="flex items-center"
+          style={{ flexDirection: dir === 'left' ? 'row-reverse' : dir === 'up' ? 'column-reverse' : dir === 'down' ? 'column' : 'row' }}
+        >
+          {/* Dot */}
+          <div
+            style={{
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              background: 'white',
+              border: '2px solid var(--color-primary)',
+              flexShrink: 0,
+            }}
+          />
+          {/* Line */}
+          <div style={lineStyles[dir]} />
+          {/* Label */}
+          <div
+            style={{
+              background: 'var(--color-primary)',
+              color: 'white',
+              fontSize: '10px',
+              fontWeight: 600,
+              padding: '3px 8px',
+              borderRadius: '20px',
+              whiteSpace: 'nowrap',
+              [isHoriz ? '' : 'textAlign']: 'center',
+            }}
+          >
+            {label}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <section
+      style={{
+        background: 'white',
+        borderTop: '1px solid var(--color-border)',
+        padding: '96px 0 120px',
+      }}
+    >
+      <div className="max-w-[1280px] mx-auto px-8">
+        {/* Heading */}
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <p
+            style={{
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--color-primary)',
+              marginBottom: '12px',
+            }}
+          >
+            Product preview
+          </p>
+          <h2
+            style={{
+              fontSize: '2rem',
+              fontWeight: 700,
+              letterSpacing: '-0.025em',
+              lineHeight: 1.2,
+              color: 'var(--color-text-primary)',
+              marginBottom: '16px',
+            }}
+          >
+            See your entire workload at a glance
+          </h2>
+          <p
+            style={{
+              fontSize: '1rem',
+              color: 'var(--color-text-secondary)',
+              lineHeight: 1.7,
+            }}
+          >
+            StudyFlow brings deadlines, study plans, tasks, and progress together in one organised dashboard.
+          </p>
+        </div>
+
+        {/* Dashboard frame — with annotations */}
+        <div className="relative sf-showcase-wrap" style={{ padding: '0 48px' }}>
+
+          {/* Annotation: Sidebar nav */}
+          <Annotation label="Smart sidebar nav" style={{ top: '48px', left: '0px' }} dir="right" />
+          {/* Annotation: Deadlines panel */}
+          <Annotation label="Deadline tracker" style={{ top: '172px', left: '0px' }} dir="right" />
+          {/* Annotation: Stats */}
+          <Annotation label="Live productivity stats" style={{ top: '48px', right: '0px' }} dir="left" />
+          {/* Annotation: Schedule */}
+          <Annotation label="Weekly schedule" style={{ bottom: '120px', right: '0px' }} dir="left" />
+
+          {/* Browser shell */}
+          <div
+            className="rounded-[var(--radius-xl)] overflow-hidden"
+            style={{
+              border: '1px solid var(--color-border)',
+              boxShadow: '0 40px 100px rgba(55,48,163,0.15), 0 8px 32px rgba(55,48,163,0.08)',
+            }}
+          >
+            {/* Chrome bar */}
+            <div
+              className="flex items-center gap-3 px-5 py-3.5"
+              style={{ background: '#f0f1f5', borderBottom: '1px solid #dde0ee' }}
+            >
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-[#fc5f5a]" />
+                <div className="w-3 h-3 rounded-full bg-[#fdbc40]" />
+                <div className="w-3 h-3 rounded-full bg-[#34c84a]" />
+              </div>
+              <div
+                className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-[6px] text-xs max-w-sm mx-auto"
+                style={{ background: 'white', border: '1px solid #dde0ee', color: '#8b91af', fontFamily: 'var(--font-mono)' }}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                app.studyflow.io/dashboard
+              </div>
+              <div style={{ width: '60px' }} />
+            </div>
+
+            {/* App layout */}
+            <div className="flex" style={{ background: '#f5f6fa', minHeight: '580px' }}>
+
+              {/* Sidebar */}
+              <div
+                className="flex flex-col py-5 shrink-0"
+                style={{ width: '200px', background: 'white', borderRight: '1px solid var(--color-border)' }}
+              >
+                {/* Logo */}
+                <div className="flex items-center gap-2.5 px-4 mb-6">
+                  <div
+                    className="w-7 h-7 rounded-[6px] flex items-center justify-center shrink-0"
+                    style={{ background: 'linear-gradient(135deg, #3730a3 0%, #7c3aed 100%)' }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z" fill="white" />
+                      <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>StudyFlow</span>
+                </div>
+
+                {/* Nav */}
+                <div className="px-2 flex flex-col gap-0.5 flex-1">
+                  {navItems.map((item, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-[8px]"
+                      style={{
+                        background: item.active ? 'var(--color-primary)' : 'transparent',
+                        color: item.active ? 'white' : 'var(--color-text-secondary)',
+                        cursor: 'default',
+                      }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+                        {item.icon}
+                      </svg>
+                      <span style={{ fontSize: '12px', fontWeight: item.active ? 600 : 500, flex: 1 }}>{item.label}</span>
+                      {item.badge && (
+                        <span
+                          style={{
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            padding: '1px 5px',
+                            borderRadius: '20px',
+                            background: item.active ? 'rgba(255,255,255,0.2)' : 'var(--color-primary-light)',
+                            color: item.active ? 'white' : 'var(--color-primary)',
+                          }}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* User */}
+                <div className="px-3 pt-4 border-t border-[var(--color-border)] mx-2">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                      style={{ background: 'linear-gradient(135deg, #818cf8, #7c3aed)', fontSize: '9px', fontWeight: 700, color: 'white' }}
+                    >
+                      JL
+                    </div>
+                    <div>
+                      <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-primary)' }}>Jamie Lee</p>
+                      <p style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>CS · Year 3</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main area */}
+              <div className="flex-1 flex flex-col overflow-hidden">
+
+                {/* Top bar */}
+                <div
+                  className="flex items-center justify-between px-6 py-3.5 shrink-0"
+                  style={{ background: 'white', borderBottom: '1px solid var(--color-border)' }}
+                >
+                  <div>
+                    <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 500 }}>Wednesday, 22 Oct 2025</p>
+                    <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.015em' }}>Good morning, Jamie 👋</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Search */}
+                    <div
+                      className="flex items-center gap-2 px-3 h-8 rounded-[8px]"
+                      style={{ background: 'var(--color-background)', border: '1px solid var(--color-border)', fontSize: '11px', color: 'var(--color-text-muted)', width: '160px' }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                      Search…
+                    </div>
+                    {/* Add Assignment */}
+                    <div
+                      className="flex items-center gap-1.5 px-3 h-8 rounded-[8px] text-white"
+                      style={{ background: 'var(--color-primary)', fontSize: '11px', fontWeight: 600, cursor: 'default' }}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                      Add Assignment
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content grid */}
+                <div className="flex-1 p-5 grid gap-4" style={{ gridTemplateColumns: '1fr 1fr', gridTemplateRows: 'auto 1fr' }}>
+
+                  {/* Stats row — spans 2 cols */}
+                  <div className="col-span-2 grid grid-cols-4 gap-3">
+                    {stats.map((s) => (
+                      <div
+                        key={s.label}
+                        className="rounded-[10px] px-4 py-3"
+                        style={{ background: 'white', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+                      >
+                        <p style={{ fontSize: '9px', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '6px' }}>{s.label}</p>
+                        <p style={{ fontSize: '22px', fontWeight: 800, color: s.color, letterSpacing: '-0.03em', lineHeight: 1 }}>{s.value}</p>
+                        <p style={{ fontSize: '9px', color: 'var(--color-text-muted)', marginTop: '3px' }}>{s.sub}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Deadlines panel */}
+                  <div
+                    className="rounded-[10px] p-4 flex flex-col"
+                    style={{ background: 'white', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Upcoming Deadlines</p>
+                      <p style={{ fontSize: '10px', color: 'var(--color-secondary)', fontWeight: 600 }}>View all →</p>
+                    </div>
+                    <div className="flex flex-col gap-2.5">
+                      {deadlines.map((d) => (
+                        <div key={d.label} className="flex items-center gap-3">
+                          <div className="w-1 rounded-full shrink-0" style={{ height: '36px', background: d.color }} />
+                          <div className="flex-1 min-w-0">
+                            <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.label}</p>
+                            <p style={{ fontSize: '9.5px', color: 'var(--color-text-muted)', marginTop: '1px' }}>{d.course}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p style={{ fontSize: '10px', fontWeight: 600, color: d.urgent ? 'var(--color-warning)' : 'var(--color-text-muted)' }}>{d.due}</p>
+                            <div className="mt-1 w-16 h-1 rounded-full overflow-hidden" style={{ background: '#e2e5ef' }}>
+                              <div className="h-full rounded-full" style={{ width: `${d.pct}%`, background: d.color }} />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Right column: Schedule + Assignment progress */}
+                  <div className="flex flex-col gap-4">
+
+                    {/* Weekly schedule */}
+                    <div
+                      className="rounded-[10px] p-4"
+                      style={{ background: 'white', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Weekly Schedule</p>
+                        <p style={{ fontSize: '9px', color: 'var(--color-text-muted)', fontWeight: 500 }}>Week 9</p>
+                      </div>
+                      <div className="flex gap-1.5">
+                        {schedule.map((col) => (
+                          <div key={col.day} className="flex-1 flex flex-col gap-1">
+                            <p style={{ fontSize: '8px', fontWeight: 700, color: 'var(--color-text-muted)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{col.day}</p>
+                            <div className="relative" style={{ height: `${GRID_H}px` }}>
+                              {Array.from({ length: SLOTS }).map((_, i) => (
+                                <div key={i} className="absolute w-full" style={{ top: `${(i / SLOTS) * 100}%`, borderTop: '1px dashed #e2e5ef' }} />
+                              ))}
+                              {col.slots.map((b, bi) => (
+                                <div
+                                  key={bi}
+                                  className="absolute inset-x-0 rounded-[3px] px-0.5 flex items-start justify-center pt-0.5"
+                                  style={{
+                                    top: `${(b.s / SLOTS) * 100}%`,
+                                    height: `${(b.l / SLOTS) * 100}%`,
+                                    background: b.color + '20',
+                                    borderLeft: `2px solid ${b.color}`,
+                                  }}
+                                >
+                                  <p style={{ fontSize: '6px', fontWeight: 700, color: b.color, lineHeight: 1.3, textAlign: 'center', overflow: 'hidden', width: '100%' }}>{b.label}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Assignment progress */}
+                    <div
+                      className="rounded-[10px] p-4 flex-1"
+                      style={{ background: 'white', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+                    >
+                      <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '12px' }}>Assignment Progress</p>
+                      <div className="flex flex-col gap-3">
+                        {assignments.map((a) => (
+                          <div key={a.title}>
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="min-w-0">
+                                <p style={{ fontSize: '10.5px', fontWeight: 600, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>{a.title}</p>
+                                <p style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>{a.module}</p>
+                              </div>
+                              <span
+                                style={{
+                                  fontSize: '8.5px',
+                                  fontWeight: 600,
+                                  padding: '2px 7px',
+                                  borderRadius: '20px',
+                                  background: a.pct === 100 ? 'var(--color-success-light)' : 'var(--color-primary-light)',
+                                  color: a.pct === 100 ? 'var(--color-success-foreground)' : 'var(--color-primary)',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {a.status}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: '#e2e5ef' }}>
+                                <div className="h-full rounded-full transition-all" style={{ width: `${a.pct}%`, background: a.color }} />
+                              </div>
+                              <p style={{ fontSize: '9px', color: 'var(--color-text-muted)', fontWeight: 600, minWidth: '24px', textAlign: 'right' }}>{a.pct}%</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Testimonials ─────────────────────────────────────────────────────────────
+function TestimonialsSection() {
+  const testimonials = [
+    {
+      quote: "StudyFlow helped me stop relying on last-minute reminders and finally plan my coursework properly. I submitted every assignment on time last semester for the first time.",
+      name: 'Priya Sharma',
+      course: 'BSc Psychology · University of Bristol · Year 2',
+      initials: 'PS',
+      from: '#818cf8',
+      to: '#7c3aed',
+    },
+    {
+      quote: "The study planner broke down my dissertation into manageable weekly sessions. I went from feeling overwhelmed to genuinely in control of my workload.",
+      name: 'Daniel Okonkwo',
+      course: 'MEng Computer Science · University of Edinburgh · Year 4',
+      initials: 'DO',
+      from: '#34d399',
+      to: '#059669',
+    },
+    {
+      quote: "Progress analytics made it easy to spot when I was falling behind. I can actually see which modules I spend the most time on and adjust my priorities accordingly.",
+      name: 'Mei-Ling Tan',
+      course: 'BA Economics · University of Manchester · Year 3',
+      initials: 'MT',
+      from: '#f472b6',
+      to: '#db2777',
+    },
+  ]
+
+  return (
+    <section
+      style={{
+        background: 'var(--color-background)',
+        borderTop: '1px solid var(--color-border)',
+        padding: '96px 0 104px',
+      }}
+    >
+      <div className="max-w-[1280px] mx-auto px-8">
+        {/* Fictional content notice */}
+        <div
+          className="flex items-center gap-2.5 mb-12 px-4 py-3 rounded-[var(--radius-md)] w-fit"
+          style={{ background: 'var(--color-warning-light)', border: '1px solid #fde68a' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-warning-foreground)' }}>
+            Portfolio notice — all testimonials, names, and universities below are fictional and created for demonstration purposes only.
+          </p>
+        </div>
+
+        {/* Heading */}
+        <div className="max-w-xl mb-14">
+          <p style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-secondary)', marginBottom: '12px' }}>
+            Student stories
+          </p>
+          <h2 style={{ fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.025em', lineHeight: 1.2, color: 'var(--color-text-primary)', marginBottom: '16px' }}>
+            Students who got organised
+          </h2>
+          <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>
+            See how StudyFlow helps students take back control of their academic workload — one semester at a time.
+          </p>
+        </div>
+
+        {/* Cards */}
+        <div className="grid grid-cols-3 gap-6">
+          {testimonials.map((t) => (
+            <div
+              key={t.name}
+              className="flex flex-col gap-6 p-7 rounded-[var(--radius-lg)] bg-white"
+              style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}
+            >
+              {/* Quote mark */}
+              <div style={{ fontSize: '3rem', lineHeight: 1, color: 'var(--color-primary-light)', fontWeight: 800, marginBottom: '-12px', userSelect: 'none' }}>"</div>
+
+              {/* Quote text */}
+              <p style={{ fontSize: '0.9375rem', color: 'var(--color-text-primary)', lineHeight: 1.7, fontStyle: 'italic', flex: 1 }}>
+                "{t.quote}"
+              </p>
+
+              {/* Divider */}
+              <div style={{ height: '1px', background: 'var(--color-border)' }} />
+
+              {/* Author */}
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-white"
+                  style={{ background: `linear-gradient(135deg, ${t.from}, ${t.to})`, fontSize: '12px', fontWeight: 700 }}
+                >
+                  {t.initials}
+                </div>
+                <div>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>{t.name}</p>
+                  <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '1px' }}>{t.course}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Pricing ──────────────────────────────────────────────────────────────────
+function PricingSection({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const plans = [
+    {
+      name: 'Free',
+      price: null,
+      priceNote: 'Always free',
+      description: 'Everything you need to get started and build better study habits.',
+      popular: false,
+      cta: 'Start for Free',
+      ctaVariant: 'outline' as const,
+      features: [
+        'Up to 10 active assignments',
+        'Basic weekly planner',
+        'Focus timer',
+        'Deadline reminders',
+      ],
+    },
+    {
+      name: 'Student Pro',
+      price: '£3.99',
+      priceNote: 'per month',
+      description: 'For students who want full control over every module and deadline.',
+      popular: true,
+      cta: 'Start Free Trial',
+      ctaVariant: 'primary' as const,
+      features: [
+        'Unlimited assignments',
+        'Advanced study planning',
+        'Progress analytics',
+        'Calendar integrations',
+        'Priority reminders',
+      ],
+    },
+    {
+      name: 'Study Group',
+      price: '£8.99',
+      priceNote: 'per month',
+      description: 'Plan, track, and stay accountable together with your study group.',
+      popular: false,
+      cta: 'Create a Group',
+      ctaVariant: 'outline' as const,
+      features: [
+        'Shared study plans',
+        'Group accountability',
+        'Collaborative goals',
+        'Group progress dashboard',
+      ],
+    },
+  ]
+
+  return (
+    <section
+      style={{
+        background: 'white',
+        borderTop: '1px solid var(--color-border)',
+        padding: '96px 0 104px',
+      }}
+    >
+      <div className="max-w-[1280px] mx-auto px-8">
+        {/* Heading */}
+        <div className="text-center max-w-xl mx-auto mb-16">
+          <p style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-primary)', marginBottom: '12px' }}>
+            Pricing
+          </p>
+          <h2 style={{ fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.025em', lineHeight: 1.2, color: 'var(--color-text-primary)', marginBottom: '16px' }}>
+            Simple, student-friendly pricing
+          </h2>
+          <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>
+            Start for free and upgrade whenever you need more. No hidden fees, no complicated plans — just straightforward value.
+          </p>
+        </div>
+
+        {/* Cards */}
+        <div className="grid grid-cols-3 gap-6 items-start">
+          {plans.map((plan) => (
+            <div
+              key={plan.name}
+              className="flex flex-col rounded-[var(--radius-lg)] overflow-hidden relative"
+              style={{
+                border: plan.popular ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                background: plan.popular ? 'white' : 'var(--color-background)',
+                boxShadow: plan.popular ? 'var(--shadow-card-hover)' : 'var(--shadow-card)',
+              }}
+            >
+              {/* Popular badge */}
+              {plan.popular && (
+                <div
+                  className="absolute top-0 right-6 px-3 py-1 rounded-b-[6px] text-white"
+                  style={{ background: 'var(--color-primary)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em' }}
+                >
+                  Most Popular
+                </div>
+              )}
+
+              <div className="p-8 flex flex-col gap-6 flex-1">
+                {/* Plan name + description */}
+                <div>
+                  <h3 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '6px', letterSpacing: '-0.01em' }}>
+                    {plan.name}
+                  </h3>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+                    {plan.description}
+                  </p>
+                </div>
+
+                {/* Price */}
+                <div className="flex items-end gap-1.5 pb-6" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                  {plan.price ? (
+                    <>
+                      <span style={{ fontSize: '2.25rem', fontWeight: 800, color: 'var(--color-text-primary)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                        {plan.price}
+                      </span>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: '3px' }}>
+                        {plan.priceNote}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: '2.25rem', fontWeight: 800, color: 'var(--color-text-primary)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                        Free
+                      </span>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: '3px' }}>
+                        {plan.priceNote}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Features */}
+                <ul className="flex flex-col gap-3 flex-1">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5">
+                      <span
+                        className="w-4.5 h-4.5 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                        style={{ background: 'var(--color-success-light)', color: 'var(--color-success)', width: '18px', height: '18px' }}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </span>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* CTA */}
+                <button
+                  className="w-full h-11 rounded-[var(--radius-md)] font-medium text-sm transition-all duration-150 cursor-pointer"
+                  style={
+                    plan.ctaVariant === 'primary'
+                      ? { background: 'var(--color-primary)', color: 'white', border: 'none' }
+                      : { background: 'white', color: 'var(--color-primary)', border: '1.5px solid var(--color-primary)' }
+                  }
+                  onClick={() => onNavigate('register')}
+                >
+                  {plan.cta}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── FAQ ──────────────────────────────────────────────────────────────────────
+function FAQSection() {
+  const [open, setOpen] = useState<number | null>(null)
+
+  const faqs = [
+    {
+      q: 'Is StudyFlow free?',
+      a: 'Yes — StudyFlow has a free plan that includes up to 10 active assignments, a basic weekly planner, a focus timer, and deadline reminders. You can upgrade to Student Pro or Study Group at any time for more advanced features.',
+    },
+    {
+      q: 'Can I use StudyFlow on mobile?',
+      a: 'StudyFlow is designed primarily as a desktop web application, optimised for a 1440px viewport. A mobile-responsive layout and native apps for iOS and Android are planned for a future release.',
+    },
+    {
+      q: 'Can I connect my university calendar?',
+      a: "Calendar integration is available on the Student Pro and Study Group plans. StudyFlow supports import from Google Calendar, Microsoft Outlook, and standard iCal feeds — so your timetable and StudyFlow stay in sync automatically.",
+    },
+    {
+      q: 'Does StudyFlow complete assignments for students?',
+      a: "No — StudyFlow is an organisation and planning tool. It helps you manage deadlines, schedule study time, and track progress. The work itself is always yours.",
+    },
+    {
+      q: 'Can I cancel my plan at any time?',
+      a: "Absolutely. There are no long-term contracts. You can cancel your Student Pro or Study Group subscription at any time from your account settings, and you'll retain access until the end of your current billing period.",
+    },
+  ]
+
+  return (
+    <section
+      style={{
+        background: 'var(--color-background)',
+        borderTop: '1px solid var(--color-border)',
+        padding: '96px 0 104px',
+      }}
+    >
+      <div className="max-w-[1280px] mx-auto px-8">
+        <div className="grid grid-cols-[1fr_1.6fr] gap-20 items-start">
+
+          {/* Left: heading */}
+          <div className="sticky top-24">
+            <p style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-primary)', marginBottom: '12px' }}>
+              FAQ
+            </p>
+            <h2 style={{ fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.025em', lineHeight: 1.2, color: 'var(--color-text-primary)', marginBottom: '16px' }}>
+              Common questions
+            </h2>
+            <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>
+              Anything else on your mind? Reach out through the support link in the footer.
+            </p>
+          </div>
+
+          {/* Right: accordion */}
+          <div className="flex flex-col divide-y" style={{ borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
+            {faqs.map((faq, i) => (
+              <div key={faq.q}>
+                <button
+                  onClick={() => setOpen(open === i ? null : i)}
+                  className="w-full flex items-center justify-between gap-4 py-5 text-left cursor-pointer"
+                  style={{ background: 'transparent', border: 'none', padding: '20px 0' }}
+                >
+                  <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.4 }}>
+                    {faq.q}
+                  </span>
+                  <span
+                    className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200"
+                    style={{
+                      background: open === i ? 'var(--color-primary)' : 'var(--color-border)',
+                      color: open === i ? 'white' : 'var(--color-text-secondary)',
+                      transform: open === i ? 'rotate(45deg)' : 'rotate(0deg)',
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                  </span>
+                </button>
+                {open === i && (
+                  <div style={{ paddingBottom: '20px' }}>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', lineHeight: 1.75 }}>
+                      {faq.a}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── CTA Banner ───────────────────────────────────────────────────────────────
+function CTASection({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  return (
+    <section
+      style={{
+        borderTop: '1px solid var(--color-border)',
+        padding: '96px 0',
+        background: 'linear-gradient(135deg, var(--color-primary) 0%, #5b21b6 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Subtle dot grid */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+        }}
+      />
+      {/* Glow orbs */}
+      <div aria-hidden className="absolute pointer-events-none" style={{ top: '-100px', right: '-80px', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.07) 0%, transparent 70%)' }} />
+      <div aria-hidden className="absolute pointer-events-none" style={{ bottom: '-60px', left: '-60px', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)' }} />
+
+      <div className="relative max-w-[1280px] mx-auto px-8 text-center">
+        <div
+          className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 rounded-full"
+          style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-[#34d399]" />
+          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.01em' }}>
+            Free to get started — no card required
+          </span>
+        </div>
+
+        <h2
+          style={{
+            fontSize: '2.75rem',
+            fontWeight: 800,
+            letterSpacing: '-0.03em',
+            lineHeight: 1.1,
+            color: 'white',
+            marginBottom: '20px',
+            maxWidth: '640px',
+            margin: '0 auto 20px',
+          }}
+        >
+          Take control of your deadlines today
+        </h2>
+        <p
+          style={{
+            fontSize: '1.0625rem',
+            color: 'rgba(255,255,255,0.75)',
+            lineHeight: 1.7,
+            maxWidth: '480px',
+            margin: '0 auto 40px',
+          }}
+        >
+          Create your free StudyFlow account and build a study routine that works for you.
+        </p>
+
+        <div className="flex items-center justify-center gap-3">
+          <button
+            className="h-12 px-8 rounded-[var(--radius-lg)] font-semibold text-base transition-all duration-150 cursor-pointer"
+            style={{ background: 'white', color: 'var(--color-primary)', border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}
+            onClick={() => onNavigate('register')}
+          >
+            Get Started for Free
+          </button>
+          <button
+            className="h-12 px-8 rounded-[var(--radius-lg)] font-semibold text-base transition-all duration-150 cursor-pointer"
+            style={{ background: 'rgba(255,255,255,0.12)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)' }}
+          >
+            View Demo
+          </button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Footer ───────────────────────────────────────────────────────────────────
+function Footer() {
+  const cols = [
+    {
+      heading: 'Product',
+      links: ['Features', 'How It Works', 'Pricing', 'Changelog', 'Roadmap'],
+    },
+    {
+      heading: 'Company',
+      links: ['About', 'Blog', 'Careers', 'Press', 'Contact'],
+    },
+    {
+      heading: 'Support',
+      links: ['Help Centre', 'Getting Started', 'Community', 'Status', 'Report a Bug'],
+    },
+  ]
+
+  const social = [
+    {
+      label: 'Twitter / X',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.74l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+        </svg>
+      ),
+    },
+    {
+      label: 'LinkedIn',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+        </svg>
+      ),
+    },
+    {
+      label: 'GitHub',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Instagram',
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" />
+        </svg>
+      ),
+    },
+  ]
+
+  return (
+    <footer style={{ background: '#0f1021', borderTop: '1px solid #1e2140' }}>
+      {/* Main footer */}
+      <div className="max-w-[1280px] mx-auto px-8 pt-16 pb-12">
+        <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr] gap-12">
+
+          {/* Brand column */}
+          <div>
+            <div className="flex items-center gap-2.5 mb-5">
+              <div
+                className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #4338ca 0%, #7c3aed 100%)' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" fill="white" />
+                  <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                  <path d="M2 12l10 5 10-5" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </div>
+              <span style={{ fontSize: '1rem', fontWeight: 700, color: 'white', letterSpacing: '-0.01em' }}>StudyFlow</span>
+            </div>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', lineHeight: 1.7, maxWidth: '280px', marginBottom: '24px' }}>
+              The academic productivity workspace built for university students. Stay organised, study smarter.
+            </p>
+            {/* Social icons */}
+            <div className="flex items-center gap-3">
+              {social.map((s) => (
+                <a
+                  key={s.label}
+                  href="#"
+                  aria-label={s.label}
+                  className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center transition-all duration-150 no-underline"
+                  style={{ background: '#1e2140', color: '#6b7280' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'white'; e.currentTarget.style.background = '#2d3158' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = '#1e2140' }}
+                >
+                  {s.icon}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Link columns */}
+          {cols.map((col) => (
+            <div key={col.heading}>
+              <p style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9ca3af', marginBottom: '16px' }}>
+                {col.heading}
+              </p>
+              <ul className="flex flex-col gap-3">
+                {col.links.map((link) => (
+                  <li key={link}>
+                    <a
+                      href="#"
+                      className="no-underline transition-colors duration-150"
+                      style={{ fontSize: '0.875rem', color: '#6b7280' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = 'white' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280' }}
+                    >
+                      {link}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom bar */}
+      <div
+        className="max-w-[1280px] mx-auto px-8 py-5 flex items-center justify-between"
+        style={{ borderTop: '1px solid #1e2140' }}
+      >
+        <p style={{ fontSize: '0.8125rem', color: '#4b5563' }}>
+          © 2025 StudyFlow. All rights reserved. This is a fictional portfolio project — not a real product.
+        </p>
+        <div className="flex items-center gap-6">
+          {['Privacy Policy', 'Terms of Service', 'Accessibility'].map((l) => (
+            <a
+              key={l}
+              href="#"
+              className="no-underline transition-colors duration-150"
+              style={{ fontSize: '0.8125rem', color: '#4b5563' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#9ca3af' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#4b5563' }}
+            >
+              {l}
+            </a>
+          ))}
+        </div>
+      </div>
+    </footer>
+  )
+}
+
+// ─── Shared Auth Components ───────────────────────────────────────────────────
+function AuthLogo({
+  onHome,
+  inHeader = false,
+}: {
+  onHome: () => void
+  inHeader?: boolean
+}) {
+  return (
+    <button
+      onClick={onHome}
+      className={`flex items-center gap-2.5 cursor-pointer ${
+        inHeader ? '' : 'mx-auto mb-8'
+      }`}
+      style={{
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        margin: inHeader ? 0 : undefined,
+      }}
+    >
+      <div
+        className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center shrink-0"
+        style={{
+          background:
+            'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)',
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" fill="white" />
+          <path
+            d="M2 17l10 5 10-5"
+            stroke="white"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+          <path
+            d="M2 12l10 5 10-5"
+            stroke="rgba(255,255,255,0.6)"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+      </div>
+
+      <span
+        style={{
+          fontSize: '1.0625rem',
+          fontWeight: 700,
+          color: 'var(--color-text-primary)',
+          letterSpacing: '-0.01em',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        StudyFlow
+      </span>
+    </button>
+  )
+}
+
+function GoogleButton({ label }: { label: string }) {
+  return (
+    <button
+      className="w-full h-11 flex items-center justify-center gap-3 rounded-[var(--radius-md)] font-medium text-sm transition-all duration-150 cursor-pointer"
+      style={{ background: 'white', border: '1.5px solid var(--color-border)', color: 'var(--color-text-primary)' }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-background)' }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'white' }}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+      </svg>
+      {label}
+    </button>
+  )
+}
+
+function AuthDivider() {
+  return (
+    <div className="flex items-center gap-3 my-5">
+      <div style={{ flex: 1, height: '1px', background: 'var(--color-border)' }} />
+      <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontWeight: 500 }}>or</span>
+      <div style={{ flex: 1, height: '1px', background: 'var(--color-border)' }} />
+    </div>
+  )
+}
+
+// Field helper
+function Field({
+  label,
+  id,
+  type = 'text',
+  placeholder,
+  value,
+  onChange,
+  error,
+  success,
+  hint,
+  suffix,
+  autoComplete,
+  required,
+}: {
+  label: string
+  id: string
+  type?: string
+  placeholder?: string
+  value: string
+  onChange: (v: string) => void
+  error?: string
+  success?: boolean
+  hint?: string
+  suffix?: React.ReactNode
+  autoComplete?: string
+  required?: boolean
+}) {
+  const borderColor = error
+    ? 'var(--color-error)'
+    : success
+    ? 'var(--color-success)'
+    : 'var(--color-border)'
+  const focusShadow = error
+    ? '0 0 0 3px rgba(220,38,38,0.12)'
+    : success
+    ? '0 0 0 3px rgba(22,163,74,0.12)'
+    : 'var(--shadow-focus)'
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+        {label}{required && <span style={{ color: 'var(--color-error)', marginLeft: '2px' }}>*</span>}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          autoComplete={autoComplete}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full h-11 px-4 rounded-[var(--radius-md)] text-sm transition-all duration-150"
+          style={{
+            border: `1.5px solid ${borderColor}`,
+            background: 'white',
+            color: 'var(--color-text-primary)',
+            outline: 'none',
+          }}
+          onFocus={(e) => { e.currentTarget.style.boxShadow = focusShadow; e.currentTarget.style.borderColor = error ? 'var(--color-error)' : success ? 'var(--color-success)' : 'var(--color-primary)' }}
+          onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = borderColor }}
+        />
+        {suffix && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            {suffix}
+          </div>
+        )}
+        {!suffix && success && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-success)]">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+          </div>
+        )}
+        {!suffix && error && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-error)]">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+          </div>
+        )}
+      </div>
+      {error && (
+        <p className="flex items-center gap-1.5" style={{ fontSize: '12px', color: 'var(--color-error)' }} role="alert">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+          {error}
+        </p>
+      )}
+      {hint && !error && <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{hint}</p>}
+    </div>
+  )
+}
+
+// Select field
+function SelectField({
+  label,
+  id,
+  value,
+  onChange,
+  options,
+  placeholder,
+  required,
+}: {
+  label: string
+  id: string
+  value: string
+  onChange: (v: string) => void
+  options: string[]
+  placeholder: string
+  required?: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+        {label}{required && <span style={{ color: 'var(--color-error)', marginLeft: '2px' }}>*</span>}
+      </label>
+      <div className="relative">
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full h-11 px-4 rounded-[var(--radius-md)] text-sm appearance-none transition-all duration-150 cursor-pointer"
+          style={{
+            border: '1.5px solid var(--color-border)',
+            background: 'white',
+            color: value ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+            outline: 'none',
+          }}
+          onFocus={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-focus)'; e.currentTarget.style.borderColor = 'var(--color-primary)' }}
+          onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = 'var(--color-border)' }}
+        >
+          <option value="" disabled>{placeholder}</option>
+          {options.map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--color-text-muted)]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9" /></svg>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Log In Page ──────────────────────────────────────────────────────────────
+function LoginPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [authError, setAuthError] = useState('')
+  const [resetMessage, setResetMessage] = useState('')
+
+  const emailError = submitted && !/^\S+@\S+\.\S+$/.test(email)
+  const passwordError = submitted && password.length < 8
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitted(true)
+    setAuthError('')
+    if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8) return
+    try {
+      setLoading(true)
+      await login(email, password)
+      onNavigate('dashboard')
+    } catch (error) {
+      setAuthError(readableApiError(error))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleReset = async () => {
+    setResetMessage('')
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setAuthError('Enter your email address first, then select “Forgot password?”.')
+      return
+    }
+    try {
+      await requestPasswordReset(email)
+      setResetMessage('If that account exists, a password-reset email has been sent.')
+      setAuthError('')
+    } catch (error) {
+      setAuthError(readableApiError(error))
+    }
+  }
+
+return (
+  <div
+    className="min-h-screen flex flex-col"
+    style={{
+      background: 'var(--color-background)',
+      fontFamily: 'var(--font-sans)',
+    }}
+  >
+    {/* Header */}
+    <div
+      className="grid grid-cols-[1fr_auto_1fr] items-center px-8 h-20"
+      style={{
+        background: 'white',
+        borderBottom: '1px solid var(--color-border)',
+      }}
+    >
+      {/* Empty column keeps the logo mathematically centred */}
+      <div />
+
+      <AuthLogo
+        inHeader
+        onHome={() => onNavigate('landing')}
+      />
+
+      <button
+        onClick={() => onNavigate('register')}
+        className="text-sm font-medium cursor-pointer justify-self-end"
+        style={{
+          background: 'none',
+          border: 'none',
+          color: 'var(--color-primary)',
+        }}
+      >
+        Create an account →
+      </button>
+    </div>
+
+    {/* Login content */}
+    <div className="flex-1 flex items-center justify-center px-4 py-16">
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '440px',
+        }}
+      >
+        <div className="text-center mb-8">
+          <h1
+            style={{
+              fontSize: '1.75rem',
+              fontWeight: 800,
+              letterSpacing: '-0.025em',
+              color: 'var(--color-text-primary)',
+              marginBottom: 8,
+            }}
+          >
+            Welcome back
+          </h1>
+
+          <p
+            style={{
+              fontSize: '0.9375rem',
+              color: 'var(--color-text-secondary)',
+            }}
+          >
+            Log in to continue with StudyFlow.
+          </p>
+        </div>
+
+        <div
+          className="rounded-[var(--radius-lg)] p-8"
+          style={{
+            background: 'white',
+            border: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
+          <button
+            type="button"
+            disabled
+            className="w-full h-11 rounded-[var(--radius-md)] font-semibold text-sm"
+            style={{
+              border: '1.5px solid var(--color-border)',
+              background: 'var(--color-background)',
+              color: 'var(--color-text-muted)',
+              cursor: 'not-allowed',
+            }}
+          >
+            Google sign-in coming later
+          </button>
+
+          <AuthDivider />
+
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col gap-5"
+            noValidate
+          >
+            <Field
+              id="login-email"
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={setEmail}
+              required
+              error={
+                emailError
+                  ? 'Enter a valid email address.'
+                  : undefined
+              }
+            />
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label
+                  htmlFor="login-password"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: 'var(--color-text-primary)',
+                  }}
+                >
+                  Password{' '}
+                  <span
+                    style={{
+                      color: 'var(--color-error)',
+                    }}
+                  >
+                    *
+                  </span>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  style={{
+                    border: 'none',
+                    background: 'none',
+                    color: 'var(--color-primary)',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              <div className="relative">
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className="w-full h-11 pl-4 pr-12 rounded-[var(--radius-md)] text-sm"
+                  style={{
+                    border: `1.5px solid ${
+                      passwordError
+                        ? 'var(--color-error)'
+                        : 'var(--color-border)'
+                    }`,
+                    outline: 'none',
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPassword((v) => !v)
+                  }
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{
+                    border: 'none',
+                    background: 'none',
+                    color: 'var(--color-text-muted)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+
+              {passwordError && (
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: 'var(--color-error)',
+                    marginTop: 6,
+                  }}
+                >
+                  Password must be at least 8 characters.
+                </p>
+              )}
+            </div>
+
+            {authError && (
+              <p
+                role="alert"
+                style={{
+                  fontSize: 12,
+                  color: 'var(--color-error)',
+                  padding: 10,
+                  borderRadius: 8,
+                  background: 'var(--color-error-light)',
+                }}
+              >
+                {authError}
+              </p>
+            )}
+
+            {resetMessage && (
+              <p
+                role="status"
+                style={{
+                  fontSize: 12,
+                  color: 'var(--color-success-foreground)',
+                  padding: 10,
+                  borderRadius: 8,
+                  background: 'var(--color-success-light)',
+                }}
+              >
+                {resetMessage}
+              </p>
+            )}
+
+            <Button
+              type="submit"
+              disabled={loading}
+              size="lg"
+              className="w-full"
+            >
+              {loading ? 'Signing in…' : 'Log In'}
+            </Button>
+          </form>
+        </div>
+
+        <p
+          className="text-center mt-6"
+          style={{
+            fontSize: 13,
+            color: 'var(--color-text-muted)',
+          }}
+        >
+          New to StudyFlow?{' '}
+          <button
+            onClick={() => onNavigate('register')}
+            style={{
+              border: 'none',
+              background: 'none',
+              color: 'var(--color-primary)',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Create a free account
+          </button>
+        </p>
+      </div>
+    </div>
+  </div>
+)
+}
+
+// ─── Password Strength ────────────────────────────────────────────────────────
+function passwordStrength(pw: string): { score: number; label: string; color: string } {
+  if (pw.length === 0) return { score: 0, label: '', color: 'var(--color-border)' }
+  let score = 0
+  if (pw.length >= 8) score++
+  if (pw.length >= 12) score++
+  if (/[A-Z]/.test(pw)) score++
+  if (/[0-9]/.test(pw)) score++
+  if (/[^A-Za-z0-9]/.test(pw)) score++
+  if (score <= 1) return { score: 1, label: 'Weak', color: 'var(--color-error)' }
+  if (score === 2) return { score: 2, label: 'Fair', color: 'var(--color-warning)' }
+  if (score === 3) return { score: 3, label: 'Good', color: '#0891b2' }
+  return { score: 4, label: 'Strong', color: 'var(--color-success)' }
+}
+
+// ─── Register Page ────────────────────────────────────────────────────────────
+function RegisterPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [degree, setDegree] = useState('')
+  const [year, setYear] = useState('')
+  const [terms, setTerms] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState('')
+  const strength = passwordStrength(password)
+
+  const errors = {
+    name: submitted && !name.trim() ? 'Enter your full name.' : undefined,
+    email: submitted && !/^\S+@\S+\.\S+$/.test(email) ? 'Enter a valid email address.' : undefined,
+    password: submitted && password.length < 8 ? 'Use at least 8 characters.' : undefined,
+    confirm: submitted && confirm !== password ? 'Passwords do not match.' : undefined,
+    degree: submitted && !degree ? 'Select your course.' : undefined,
+    year: submitted && !year ? 'Select your year of study.' : undefined,
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitted(true)
+    setError('')
+    const invalid = !name.trim() || !/^\S+@\S+\.\S+$/.test(email) || password.length < 8 || confirm !== password || !degree || !year
+    if (invalid || !terms) {
+      if (!terms) setError('You must accept the terms and privacy notice.')
+      return
+    }
+    try {
+      setLoading(true)
+      await register({ name, email, password, course: degree, yearOfStudy: year })
+      onNavigate('dashboard')
+    } catch (err) {
+      setError(readableApiError(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+return (
+  <div
+    className="min-h-screen flex flex-col"
+    style={{
+      background: 'var(--color-background)',
+      fontFamily: 'var(--font-sans)',
+    }}
+  >
+    {/* Header */}
+    <div
+      className="grid grid-cols-[1fr_auto_1fr] items-center px-8 h-20"
+      style={{
+        background: 'white',
+        borderBottom: '1px solid var(--color-border)',
+      }}
+    >
+      <div />
+
+      <AuthLogo
+        inHeader
+        onHome={() => onNavigate('landing')}
+      />
+
+      <button
+        onClick={() => onNavigate('login')}
+        className="text-sm font-medium cursor-pointer justify-self-end"
+        style={{
+          background: 'none',
+          border: 'none',
+          color: 'var(--color-primary)',
+        }}
+      >
+        Already have an account? Log in →
+      </button>
+    </div>
+
+    {/* Registration content */}
+    <div className="flex-1 flex items-center justify-center px-4 py-12">
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 560,
+        }}
+      >
+        <div className="text-center mb-7">
+          <h1
+            style={{
+              fontSize: '1.75rem',
+              fontWeight: 800,
+              color: 'var(--color-text-primary)',
+              marginBottom: 8,
+            }}
+          >
+            Create your account
+          </h1>
+
+          <p
+            style={{
+              color: 'var(--color-text-secondary)',
+              fontSize: 14,
+            }}
+          >
+            Start organising your university work in minutes.
+          </p>
+        </div>
+
+        <div
+          className="rounded-[var(--radius-lg)] p-8"
+          style={{
+            background: 'white',
+            border: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        >
+          <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-2 gap-5"
+            noValidate
+          >
+            <div className="col-span-2">
+              <Field
+                id="reg-name"
+                label="Full name"
+                value={name}
+                onChange={setName}
+                required
+                error={errors.name}
+              />
+            </div>
+
+            <div className="col-span-2">
+              <Field
+                id="reg-email"
+                label="Email"
+                type="email"
+                value={email}
+                onChange={setEmail}
+                required
+                error={errors.email}
+              />
+            </div>
+
+            <div>
+              <Field
+                id="reg-password"
+                label="Password"
+                type="password"
+                value={password}
+                onChange={setPassword}
+                required
+                error={errors.password}
+              />
+            </div>
+
+            <div>
+              <Field
+                id="reg-confirm"
+                label="Confirm password"
+                type="password"
+                value={confirm}
+                onChange={setConfirm}
+                required
+                error={errors.confirm}
+              />
+            </div>
+
+            <div className="col-span-2">
+              <div className="flex gap-1 mb-1.5">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <span
+                    key={n}
+                    style={{
+                      height: 4,
+                      flex: 1,
+                      borderRadius: 999,
+                      background:
+                        n <= strength.score
+                          ? strength.color
+                          : 'var(--color-border)',
+                    }}
+                  />
+                ))}
+              </div>
+
+              <p
+                style={{
+                  fontSize: 11,
+                  color: 'var(--color-text-muted)',
+                }}
+              >
+                {strength.label
+                  ? `Password strength: ${strength.label}`
+                  : 'Use 8+ characters with numbers and symbols.'}
+              </p>
+            </div>
+
+            <SelectField
+              id="reg-degree"
+              label="Course"
+              value={degree}
+              onChange={setDegree}
+              placeholder="Select course"
+              options={[
+                'Computer Science',
+                'Cybersecurity',
+                'Business Computing & IT',
+                'Software Engineering',
+                'Other',
+              ]}
+              required
+            />
+
+            <SelectField
+              id="reg-year"
+              label="Year of study"
+              value={year}
+              onChange={setYear}
+              placeholder="Select year"
+              options={[
+                '1',
+                '2',
+                '3',
+                '4',
+                'Postgraduate',
+                'Other',
+              ]}
+              required
+            />
+
+            {(errors.degree || errors.year) && (
+              <p
+                className="col-span-2"
+                style={{
+                  fontSize: 12,
+                  color: 'var(--color-error)',
+                }}
+              >
+                {errors.degree || errors.year}
+              </p>
+            )}
+
+            <label
+              className="col-span-2 flex items-start gap-3"
+              style={{
+                fontSize: 12.5,
+                color: 'var(--color-text-secondary)',
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={terms}
+                onChange={(e) => setTerms(e.target.checked)}
+                style={{
+                  marginTop: 3,
+                }}
+              />
+
+              <span>
+                I agree to the Terms and Privacy Notice.
+              </span>
+            </label>
+
+            {error && (
+              <p
+                className="col-span-2"
+                role="alert"
+                style={{
+                  fontSize: 12,
+                  color: 'var(--color-error)',
+                  padding: 10,
+                  borderRadius: 8,
+                  background: 'var(--color-error-light)',
+                }}
+              >
+                {error}
+              </p>
+            )}
+
+            <Button
+              type="submit"
+              disabled={loading}
+              size="lg"
+              className="col-span-2 w-full"
+            >
+              {loading ? 'Creating account…' : 'Create Account'}
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+)
+}
+
+function ResetPasswordPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const token = new URLSearchParams(window.location.search).get('token') || ''
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!token) return setError('This reset link is missing its token.')
+    if (password.length < 8) return setError('Use at least 8 characters.')
+    if (password !== confirm) return setError('Passwords do not match.')
+    try { setLoading(true); await confirmPasswordReset(token, password); setMessage('Password changed. You can now log in.'); setError('') }
+    catch (err) { setError(readableApiError(err)) } finally { setLoading(false) }
+  }
+  return <div className="min-h-screen flex items-center justify-center px-4" style={{background:'var(--color-background)'}}><div className="bg-white rounded-[var(--radius-lg)] p-8" style={{width:440,border:'1px solid var(--color-border)',boxShadow:'var(--shadow-card)'}}><AuthLogo onHome={()=>onNavigate('landing')}/><h1 style={{fontSize:24,fontWeight:800,margin:'26px 0 8px'}}>Choose a new password</h1><p style={{fontSize:13,color:'var(--color-text-muted)',marginBottom:20}}>Enter a new password for your StudyFlow account.</p><form onSubmit={submit} className="flex flex-col gap-4"><Field id="reset-password" label="New password" type="password" value={password} onChange={setPassword}/><Field id="reset-confirm" label="Confirm password" type="password" value={confirm} onChange={setConfirm}/>{error&&<p style={{fontSize:12,color:'var(--color-error)'}}>{error}</p>}{message&&<p style={{fontSize:12,color:'var(--color-success-foreground)'}}>{message}</p>}<Button type="submit" disabled={loading}>{loading?'Updating…':'Update Password'}</Button><Button type="button" variant="ghost" onClick={()=>onNavigate('login')}>Back to Log In</Button></form></div></div>
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+type DashNav = 'overview' | 'assignments' | 'planner' | 'timer' | 'analytics' | 'calendar' | 'settings'
+
+const dashNavItems: { id: DashNav; label: string; icon: React.ReactNode; badge?: number }[] = [
+  {
+    id: 'overview',
+    label: 'Overview',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    id: 'assignments',
+    label: 'Assignments',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+      </svg>
+    ),
+  },
+  {
+    id: 'planner',
+    label: 'Study Planner',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+        <line x1="8" y1="14" x2="12" y2="14" /><line x1="8" y1="18" x2="16" y2="18" />
+      </svg>
+    ),
+  },
+  {
+    id: 'timer',
+    label: 'Focus Timer',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2.5" /><path d="M9 2h6" /><path d="M12 2v3" />
+      </svg>
+    ),
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+        <line x1="2" y1="20" x2="22" y2="20" />
+      </svg>
+    ),
+  },
+  {
+    id: 'calendar',
+    label: 'Calendar',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+    ),
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    ),
+  },
+]
+
+function navigateFromDash(nav: DashNav, onNavigate: (page: Page) => void) {
+  const routeByNav: Record<DashNav, Page> = {
+    overview: 'dashboard',
+    assignments: 'assignments-page',
+    planner: 'planner',
+    timer: 'timer',
+    analytics: 'analytics',
+    calendar: 'calendar',
+    settings: 'settings',
+  }
+
+  onNavigate(routeByNav[nav])
+}
+
+function PageHeader({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string
+  subtitle?: string
+  action?: React.ReactNode
+}) {
+  return (
+    <header
+      className="flex items-center justify-between gap-4 px-8 py-5 shrink-0"
+      style={{
+        minHeight: '78px',
+        background: 'white',
+        borderBottom: '1px solid var(--color-border)',
+      }}
+    >
+      <div className="min-w-0">
+        <h1
+          style={{
+            fontSize: '20px',
+            fontWeight: 800,
+            color: 'var(--color-text-primary)',
+            letterSpacing: '-0.025em',
+            lineHeight: 1.25,
+          }}
+        >
+          {title}
+        </h1>
+        {subtitle && (
+          <p
+            style={{
+              marginTop: '4px',
+              fontSize: '12.5px',
+              color: 'var(--color-text-muted)',
+              lineHeight: 1.4,
+            }}
+          >
+            {subtitle}
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 shrink-0">
+        <NotificationBell />
+        {action}
+      </div>
+    </header>
+  )
+}
+
+
+// Sidebar nav item with three visual states
+function DashNavItem({
+  item,
+  active,
+  onClick,
+}: {
+  item: typeof dashNavItems[0]
+  active: boolean
+  onClick: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  const bg = active
+    ? 'var(--color-primary)'
+    : hovered
+    ? 'var(--color-border)'
+    : 'transparent'
+
+  const color = active
+    ? 'white'
+    : hovered
+    ? 'var(--color-text-primary)'
+    : 'var(--color-text-secondary)'
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] transition-all duration-150 cursor-pointer"
+      style={{ background: bg, color, border: 'none', outline: 'none' }}
+    >
+      <span className="shrink-0" style={{ opacity: active ? 1 : hovered ? 0.9 : 0.7 }}>
+        {item.icon}
+      </span>
+      <span style={{ fontSize: '13.5px', fontWeight: active ? 600 : 500, flex: 1, textAlign: 'left' }}>
+        {item.label}
+      </span>
+      {item.badge !== undefined && (
+        <span
+          className="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center"
+          style={{
+            fontSize: '10px',
+            fontWeight: 700,
+            background: active ? 'rgba(255,255,255,0.22)' : 'var(--color-primary-light)',
+            color: active ? 'white' : 'var(--color-primary)',
+          }}
+        >
+          {item.badge}
+        </span>
+      )}
+    </button>
+  )
+}
+
+// Placeholder content block — used to rough in areas for future panels
+function Placeholder({
+  label,
+  height = 180,
+  accent = false,
+}: {
+  label: string
+  height?: number
+  accent?: boolean
+}) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)]"
+      style={{
+        height,
+        border: `1.5px dashed ${accent ? 'var(--color-primary)' : 'var(--color-border-strong)'}`,
+        background: accent ? 'var(--color-primary-light)' : 'var(--color-background)',
+      }}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={accent ? 'var(--color-primary)' : 'var(--color-text-muted)'} strokeWidth="1.5" strokeLinecap="round" strokeDasharray="4 3">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+      </svg>
+      <p style={{ fontSize: '12px', fontWeight: 500, color: accent ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>
+        {label}
+      </p>
+    </div>
+  )
+}
+
+// ── Notification bell with dropdown panel ─────────────────────────────────────
+function NotificationBell() {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => setOpen((v) => !v)} aria-label="Notifications" className="flex items-center justify-center rounded-[var(--radius-md)]" style={{ width: 36, height: 36, background: open ? 'var(--color-border)' : 'white', border: '1.5px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
+        <Icon size={16}>{Icons.bell}</Icon>
+      </button>
+      {open && <div style={{ position: 'absolute', right: 0, top: 44, width: 290, zIndex: 30, background: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-dropdown)', padding: 18 }}><p style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Notifications</p><p style={{ fontSize: 12, color: 'var(--color-text-muted)', lineHeight: 1.5 }}>No notifications yet. Scheduled email reminders require SMTP configuration.</p></div>}
+    </div>
+  )
+}
+
+function DashboardPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const [assignments, setAssignments] = useState<AssignmentRecord[]>([])
+  const [sessions, setSessions] = useState<StudySessionRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const user = getAuth()?.record
+
+  useEffect(() => {
+    Promise.all([fetchAssignments(), listStudySessions()])
+      .then(([a, s]) => { setAssignments(a); setSessions(s) })
+      .catch((e) => setError(readableApiError(e)))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const active = assignments.filter((a) => a.status !== 'Completed')
+  const dueWeek = active.filter((a) => {
+    const diff = new Date(a.due_at).getTime() - Date.now()
+    return diff >= 0 && diff <= 7 * 86400000
+  }).length
+  const studiedMinutes = sessions.filter((s) => s.status === 'Completed').reduce((sum, s) => sum + Number(s.actual_minutes || 0), 0)
+  const completed = assignments.filter((a) => a.status === 'Completed').length
+  const completion = assignments.length ? Math.round((completed / assignments.length) * 100) : 0
+  const upcoming = [...assignments].sort((a,b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime()).slice(0, 5)
+
+  return (
+    <DashShell activeNav="overview" onNavChange={(n) => navigateFromDash(n, onNavigate)} onNavigate={onNavigate}>
+      <PageHeader title={`Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, ${user?.name?.split(' ')[0] || 'Student'}`} subtitle={new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} action={<Button size="sm" onClick={() => onNavigate('assignments-page')}>Add Assignment</Button>} />
+      <main className="flex-1 overflow-y-auto px-8 py-6">
+        {error && <p style={{ padding: 12, background: 'var(--color-error-light)', color: 'var(--color-error)', borderRadius: 8, marginBottom: 16 }}>{error}</p>}
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          {[
+            ['Active assignments', loading ? '…' : String(active.length)],
+            ['Due this week', loading ? '…' : String(dueWeek)],
+            ['Hours studied', loading ? '…' : (studiedMinutes / 60).toFixed(1)],
+            ['Completion rate', loading ? '…' : `${completion}%`],
+          ].map(([label, value]) => <div key={label} className="bg-white rounded-[var(--radius-lg)] p-5" style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}><p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{label}</p><p style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-text-primary)', marginTop: 8 }}>{value}</p></div>)}
+        </div>
+        <div className="grid grid-cols-[2fr_1fr] gap-6">
+          <div className="bg-white rounded-[var(--radius-lg)] overflow-hidden" style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+            <div className="flex items-center justify-between p-5" style={{ borderBottom: '1px solid var(--color-border)' }}><h2 style={{ fontSize: 15, fontWeight: 700 }}>Upcoming deadlines</h2><button onClick={() => onNavigate('assignments-page')} style={{ border: 'none', background: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontWeight: 600 }}>View all</button></div>
+            {upcoming.length === 0 && !loading ? <EmptyState onAdd={() => onNavigate('assignments-page')} /> : upcoming.map((r) => {
+              const a = toAssignment(r)
+              return <button key={r.id} onClick={() => { localStorage.setItem('studyflow_selected_assignment', r.id); onNavigate('assignment-detail') }} className="w-full flex items-center gap-4 p-4 text-left" style={{ background: 'white', border: 'none', borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}><span style={{ width: 8, height: 36, borderRadius: 8, background: a.moduleColor }} /><div style={{ flex: 1 }}><p style={{ fontSize: 13.5, fontWeight: 700 }}>{a.title}</p><p style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>{a.moduleCode} · {a.due}</p></div><StatusLabel variant={a.status === 'Completed' ? 'success' : a.status === 'Overdue' ? 'error' : 'primary'}>{a.status}</StatusLabel></button>
+            })}
+          </div>
+          <div className="bg-white rounded-[var(--radius-lg)] p-5" style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>Next study sessions</h2>
+            {sessions.filter((s) => new Date(s.start_at).getTime() >= Date.now()).slice(0,4).map((s) => <div key={s.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--color-border)' }}><p style={{ fontSize: 13, fontWeight: 700 }}>{s.title}</p><p style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>{new Date(s.start_at).toLocaleString('en-GB')} · {s.planned_minutes} min</p></div>)}
+            {!loading && sessions.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: 13 }}>No sessions planned yet.</p>}
+            <Button variant="outline" size="sm" className="w-full mt-4" onClick={() => onNavigate('planner')}>Open Study Planner</Button>
+          </div>
+        </div>
+      </main>
+    </DashShell>
+  )
+}
+
+// ─── Assignments Page ─────────────────────────────────────────────────────────
+type AssignStatus = 'Not Started' | 'In Progress' | 'Completed' | 'Overdue'
+type AssignPriority = 'High' | 'Medium' | 'Low'
+
+interface Assignment {
+  id: string
+  title: string
+  module: string
+  moduleCode: string
+  moduleColor: string
+  due: string
+  dueSortKey: string
+  priority: AssignPriority
+  pct: number
+  status: AssignStatus
+  description: string
+}
+
+const ALL_ASSIGNMENTS: Assignment[] = [
+  {
+    id: '1',
+    title: 'Database Systems Report',
+    module: 'Database Systems',
+    moduleCode: 'COMP3801',
+    moduleColor: '#3730a3',
+    due: 'Wed 22 Oct 2025',
+    dueSortKey: '2025-10-22',
+    priority: 'High',
+    pct: 0,
+    status: 'Overdue',
+    description: 'A 3,000-word technical report analysing relational vs. non-relational database architectures with benchmarks.',
+  },
+  {
+    id: '2',
+    title: 'Cybersecurity Risk Assessment',
+    module: 'Cybersecurity',
+    moduleCode: 'COMP3820',
+    moduleColor: '#7c3aed',
+    due: 'Fri 24 Oct 2025',
+    dueSortKey: '2025-10-24',
+    priority: 'High',
+    pct: 45,
+    status: 'In Progress',
+    description: 'Identify and evaluate risks for a fictional e-commerce platform. Produce a risk register and mitigation plan.',
+  },
+  {
+    id: '3',
+    title: 'Web Development Portfolio',
+    module: 'Web Development',
+    moduleCode: 'COMP3900',
+    moduleColor: '#0891b2',
+    due: 'Mon 27 Oct 2025',
+    dueSortKey: '2025-10-27',
+    priority: 'Medium',
+    pct: 80,
+    status: 'In Progress',
+    description: 'Build and deploy a responsive portfolio website demonstrating HTML, CSS, JavaScript, and accessibility standards.',
+  },
+  {
+    id: '4',
+    title: 'Business Computing Presentation',
+    module: 'Business Computing',
+    moduleCode: 'BUSN2100',
+    moduleColor: '#d97706',
+    due: 'Thu 30 Oct 2025',
+    dueSortKey: '2025-10-30',
+    priority: 'Medium',
+    pct: 100,
+    status: 'Completed',
+    description: '10-minute group presentation on digital transformation strategy for a mid-size retail company.',
+  },
+  {
+    id: '5',
+    title: 'Algorithms Problem Set 6',
+    module: 'Algorithms & Data Structures',
+    moduleCode: 'COMP2521',
+    moduleColor: '#16a34a',
+    due: 'Fri 31 Oct 2025',
+    dueSortKey: '2025-10-31',
+    priority: 'Low',
+    pct: 0,
+    status: 'Not Started',
+    description: 'Six problems covering graph traversal, dynamic programming, and amortised complexity analysis.',
+  },
+  {
+    id: '6',
+    title: 'UX Research Synthesis',
+    module: 'UX & Interaction Design',
+    moduleCode: 'DSGN3010',
+    moduleColor: '#db2777',
+    due: 'Mon 3 Nov 2025',
+    dueSortKey: '2025-11-03',
+    priority: 'Low',
+    pct: 20,
+    status: 'In Progress',
+    description: 'Synthesise findings from five user interviews into an affinity diagram and key insight report.',
+  },
+  {
+    id: '7',
+    title: 'Operating Systems Lab Report',
+    module: 'Operating Systems',
+    moduleCode: 'COMP3231',
+    moduleColor: '#059669',
+    due: 'Wed 5 Nov 2025',
+    dueSortKey: '2025-11-05',
+    priority: 'High',
+    pct: 10,
+    status: 'In Progress',
+    description: 'Document your implementation of a multi-threading scheduler in C with performance analysis.',
+  },
+  {
+    id: '8',
+    title: 'Machine Learning Essay',
+    module: 'Intro to Machine Learning',
+    moduleCode: 'COMP4418',
+    moduleColor: '#6366f1',
+    due: 'Mon 10 Nov 2025',
+    dueSortKey: '2025-11-10',
+    priority: 'Medium',
+    pct: 0,
+    status: 'Not Started',
+    description: '2,000-word critical essay comparing supervised and unsupervised learning approaches for image classification.',
+  },
+]
+
+const STATUS_STYLE: Record<AssignStatus, { bg: string; color: string }> = {
+  'Not Started': { bg: 'var(--color-border)',        color: 'var(--color-text-secondary)' },
+  'In Progress': { bg: 'var(--color-primary-light)', color: 'var(--color-primary)' },
+  'Completed':   { bg: 'var(--color-success-light)', color: 'var(--color-success-foreground)' },
+  'Overdue':     { bg: 'var(--color-error-light)',   color: 'var(--color-error-foreground)' },
+}
+const PRIORITY_STYLE: Record<AssignPriority, { bg: string; color: string }> = {
+  High:   { bg: '#fee2e2', color: '#991b1b' },
+  Medium: { bg: '#fef3c7', color: '#78350f' },
+  Low:    { bg: '#dcfce7', color: '#14532d' },
+}
+
+function toAssignment(record: AssignmentRecord): Assignment {
+  const parsedDue = record.due_at ? new Date(record.due_at) : null
+  const hasValidDue = Boolean(parsedDue && !Number.isNaN(parsedDue.getTime()))
+  const dueDate = hasValidDue ? parsedDue! : null
+
+  const priority: AssignPriority = ['High', 'Medium', 'Low'].includes(record.priority)
+    ? record.priority
+    : 'Medium'
+  const status: AssignStatus = ['Not Started', 'In Progress', 'Completed', 'Overdue'].includes(record.status)
+    ? record.status
+    : 'Not Started'
+
+  return {
+    id: record.id,
+    title: record.title || 'Untitled assignment',
+    module: record.module_name || 'General',
+    moduleCode: record.module_code || 'MODULE',
+    moduleColor: record.module_color || '#3730a3',
+    due: dueDate
+      ? dueDate.toLocaleDateString('en-GB', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        })
+      : 'No due date',
+    dueSortKey: dueDate ? dueDate.toISOString().slice(0, 10) : '9999-12-31',
+    priority,
+    pct: Math.max(0, Math.min(100, Number(record.progress) || 0)),
+    status,
+    description: record.description || '',
+  }
+}
+
+// ── Card menu ─────────────────────────────────────────────────────────────────
+function CardMenu({ open: _open, onToggle: _onToggle }: { open: boolean; onToggle: () => void }) {
+  return <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>Open →</span>
+}
+
+// ── Assignment Grid Card ───────────────────────────────────────────────────────
+function AssignmentGridCard({ a, openMenu, onMenuToggle }: {
+  a: Assignment
+  openMenu: string | null
+  onMenuToggle: (id: string) => void
+}) {
+  const daysUntil = Math.ceil((new Date(a.dueSortKey).getTime() - Date.now()) / 86400000)
+  const dueLabel = a.status === 'Overdue'
+    ? `${Math.abs(daysUntil)} day${Math.abs(daysUntil) !== 1 ? 's' : ''} overdue`
+    : daysUntil === 0 ? 'Due today'
+    : daysUntil === 1 ? 'Due tomorrow'
+    : `Due in ${daysUntil} days`
+
+  return (
+    <div
+      className="flex flex-col rounded-[var(--radius-lg)] bg-white transition-all duration-200"
+      style={{
+        border: a.status === 'Overdue' ? '1.5px solid #fca5a5' : '1px solid var(--color-border)',
+        boxShadow: 'var(--shadow-card)',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-card)'; e.currentTarget.style.transform = 'translateY(0)' }}
+    >
+      {/* Top colour stripe */}
+      <div style={{ height: '4px', background: a.moduleColor, borderRadius: '14px 14px 0 0' }} />
+
+      <div className="flex flex-col gap-4 p-5">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span
+                style={{
+                  fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '5px',
+                  background: a.moduleColor + '18', color: a.moduleColor, whiteSpace: 'nowrap',
+                }}
+              >
+                {a.moduleCode}
+              </span>
+              <span
+                style={{
+                  fontSize: '10px', fontWeight: 600, padding: '2px 7px', borderRadius: '20px',
+                  background: PRIORITY_STYLE[a.priority].bg, color: PRIORITY_STYLE[a.priority].color, whiteSpace: 'nowrap',
+                }}
+              >
+                {a.priority}
+              </span>
+            </div>
+            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1.35, letterSpacing: '-0.01em' }}>
+              {a.title}
+            </h3>
+          </div>
+          <CardMenu open={openMenu === a.id} onToggle={() => onMenuToggle(a.id)} />
+        </div>
+
+        {/* Description */}
+        <p style={{
+          fontSize: '12.5px', color: 'var(--color-text-secondary)', lineHeight: 1.6,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>
+          {a.description}
+        </p>
+
+        {/* Progress */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 500 }}>Progress</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{a.pct}%</span>
+          </div>
+          <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: '#e2e5ef' }}>
+            <div
+              style={{
+                height: '100%', width: `${a.pct}%`, borderRadius: '9999px',
+                background: a.status === 'Completed' ? 'var(--color-success)' : a.status === 'Overdue' ? 'var(--color-error)' : a.moduleColor,
+                transition: 'width 0.4s',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
+          <div className="flex items-center gap-1.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={a.status === 'Overdue' ? 'var(--color-error)' : 'var(--color-text-muted)'} strokeWidth="2" strokeLinecap="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="3" y1="10" x2="21" y2="10" />
+              <line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" />
+            </svg>
+            <span style={{
+              fontSize: '11.5px', fontWeight: a.status === 'Overdue' ? 700 : 500,
+              color: a.status === 'Overdue' ? 'var(--color-error)' : 'var(--color-text-muted)',
+            }}>
+              {dueLabel}
+            </span>
+          </div>
+          <span
+            className="inline-flex items-center gap-1"
+            style={{
+              fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '20px',
+              background: STATUS_STYLE[a.status].bg, color: STATUS_STYLE[a.status].color,
+            }}
+          >
+            <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: STATUS_STYLE[a.status].color, display: 'inline-block', opacity: 0.7 }} />
+            {a.status}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Assignment List Row ────────────────────────────────────────────────────────
+function AssignmentListRow({ a, openMenu, onMenuToggle }: {
+  a: Assignment
+  openMenu: string | null
+  onMenuToggle: (id: string) => void
+}) {
+  const daysUntil = Math.ceil((new Date(a.dueSortKey).getTime() - Date.now()) / 86400000)
+  const dueColor = a.status === 'Overdue' ? 'var(--color-error)' : daysUntil <= 2 ? 'var(--color-warning)' : 'var(--color-text-secondary)'
+
+  return (
+    <div
+      className="flex items-center gap-4 px-5 py-4 transition-all duration-150"
+      style={{ borderBottom: '1px solid var(--color-border)', cursor: 'default' }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-background)' }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+    >
+      {/* Module stripe */}
+      <div className="w-1 self-stretch rounded-full shrink-0" style={{ background: a.moduleColor }} />
+
+      {/* Module chip */}
+      <span
+        style={{
+          fontSize: '10.5px', fontWeight: 700, padding: '3px 7px', borderRadius: '5px', whiteSpace: 'nowrap', flexShrink: 0,
+          background: a.moduleColor + '18', color: a.moduleColor,
+        }}
+      >
+        {a.moduleCode}
+      </span>
+
+      {/* Title + description */}
+      <div className="flex-1 min-w-0">
+        <p style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {a.title}
+        </p>
+        <p style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '340px' }}>
+          {a.description}
+        </p>
+      </div>
+
+      {/* Due date */}
+      <span style={{ fontSize: '12px', fontWeight: 600, color: dueColor, whiteSpace: 'nowrap', minWidth: '110px', textAlign: 'right', flexShrink: 0 }}>
+        {a.due.replace(' 2025', '')}
+      </span>
+
+      {/* Priority */}
+      <span
+        style={{
+          fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', whiteSpace: 'nowrap', flexShrink: 0,
+          background: PRIORITY_STYLE[a.priority].bg, color: PRIORITY_STYLE[a.priority].color,
+        }}
+      >
+        {a.priority}
+      </span>
+
+      {/* Progress bar */}
+      <div style={{ minWidth: '100px', flexShrink: 0 }}>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: '#e2e5ef' }}>
+            <div style={{
+              height: '100%', width: `${a.pct}%`, borderRadius: '9999px',
+              background: a.status === 'Completed' ? 'var(--color-success)' : a.status === 'Overdue' ? 'var(--color-error)' : a.moduleColor,
+            }} />
+          </div>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', minWidth: '28px' }}>{a.pct}%</span>
+        </div>
+      </div>
+
+      {/* Status */}
+      <span
+        className="inline-flex items-center gap-1.5 shrink-0"
+        style={{
+          fontSize: '11px', fontWeight: 600, padding: '4px 9px', borderRadius: '20px', whiteSpace: 'nowrap',
+          background: STATUS_STYLE[a.status].bg, color: STATUS_STYLE[a.status].color,
+        }}
+      >
+        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: STATUS_STYLE[a.status].color, opacity: 0.7, display: 'inline-block' }} />
+        {a.status}
+      </span>
+
+      {/* Menu */}
+      <CardMenu open={openMenu === a.id} onToggle={() => onMenuToggle(a.id)} />
+    </div>
+  )
+}
+
+// ── Empty State ────────────────────────────────────────────────────────────────
+function EmptyState({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 px-8 text-center">
+      {/* Illustration */}
+      <div
+        className="w-20 h-20 rounded-[var(--radius-xl)] flex items-center justify-center mb-6"
+        style={{ background: 'var(--color-primary-light)' }}
+      >
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          <line x1="14" y1="5" x2="14" y2="14" strokeDasharray="2 2" />
+        </svg>
+      </div>
+      <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '8px', letterSpacing: '-0.01em' }}>
+        No assignments yet
+      </h3>
+      <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', lineHeight: 1.65, maxWidth: '320px', marginBottom: '24px' }}>
+        Add your first assignment to start tracking deadlines, progress, and study sessions in one place.
+      </p>
+      <button
+        onClick={onAdd}
+        className="flex items-center gap-2 h-10 px-5 rounded-[var(--radius-md)] text-white font-semibold text-sm cursor-pointer transition-all duration-150"
+        style={{ background: 'var(--color-primary)', border: 'none' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-primary-hover)' }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-primary)' }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Add Your First Assignment
+      </button>
+    </div>
+  )
+}
+
+// ── Mobile bottom navigation ───────────────────────────────────────────────────
+function MobileBottomNav({
+  activeNav,
+  onNavChange,
+  onNavigate,
+}: {
+  activeNav: DashNav
+  onNavChange: (n: DashNav) => void
+  onNavigate: (p: Page) => void
+}) {
+  const mobileNavItems: { id: DashNav; label: string; targetPage: Page | null; icon: React.ReactNode }[] = [
+    {
+      id: 'overview',
+      label: 'Overview',
+      targetPage: 'dashboard',
+      icon: (
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+      ),
+    },
+    {
+      id: 'assignments',
+      label: 'Assignments',
+      targetPage: 'assignments-page',
+      icon: (
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+      ),
+    },
+    {
+      id: 'planner',
+      label: 'Planner',
+      targetPage: null,
+      icon: (
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+          <line x1="8" y1="14" x2="12" y2="14" /><line x1="8" y1="18" x2="16" y2="18" />
+        </svg>
+      ),
+    },
+    {
+      id: 'analytics',
+      label: 'Analytics',
+      targetPage: 'analytics',
+      icon: (
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+          <line x1="2" y1="20" x2="22" y2="20" />
+        </svg>
+      ),
+    },
+    {
+      id: 'settings',
+      label: 'More',
+      targetPage: 'settings',
+      icon: (
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" />
+        </svg>
+      ),
+    },
+  ]
+
+  return (
+    <div
+      className="sf-mobile-bottom-nav"
+      style={{
+        display: 'none',
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
+        background: 'white',
+        borderTop: '1px solid var(--color-border)',
+        boxShadow: '0 -4px 16px 0 rgba(26,29,46,0.08)',
+        flexDirection: 'row',
+      }}
+    >
+      {mobileNavItems.map((item) => {
+        const isActive = activeNav === item.id
+        return (
+          <button
+            key={item.id}
+            onClick={() => {
+              if (item.targetPage) onNavigate(item.targetPage)
+              else onNavChange(item.id)
+            }}
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '3px',
+              padding: '8px 4px',
+              minHeight: '56px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              transition: 'color 0.15s',
+            }}
+          >
+            <span style={{ opacity: isActive ? 1 : 0.55 }}>{item.icon}</span>
+            <span style={{ fontSize: '10px', fontWeight: isActive ? 700 : 500, letterSpacing: '0.01em', lineHeight: 1 }}>{item.label}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Shared dashboard shell ─────────────────────────────────────────────────────
+function DashShell({
+  activeNav,
+  onNavChange,
+  onNavigate,
+  children,
+}: {
+  activeNav: DashNav
+  onNavChange: (n: DashNav) => void
+  onNavigate: (p: Page) => void
+  children: React.ReactNode
+}) {
+  const [assignmentCount, setAssignmentCount] = useState<number | undefined>(undefined)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const refreshAssignmentCount = async () => {
+      try {
+        const records = await fetchAssignments()
+        if (!cancelled) setAssignmentCount(records.length)
+      } catch {
+        if (!cancelled) setAssignmentCount(undefined)
+      }
+    }
+
+    const handleAssignmentsChanged = () => {
+      void refreshAssignmentCount()
+    }
+
+    void refreshAssignmentCount()
+    window.addEventListener('studyflow:assignments-changed', handleAssignmentsChanged)
+
+    return () => {
+      cancelled = true
+      window.removeEventListener('studyflow:assignments-changed', handleAssignmentsChanged)
+    }
+  }, [])
+
+  const liveDashNavItems = dashNavItems.map((item) =>
+    item.id === 'assignments' ? { ...item, badge: assignmentCount } : item,
+  )
+
+  return (
+    <div className="sf-dash flex min-h-screen" style={{ fontFamily: 'var(--font-sans)', background: 'var(--color-background)' }}>
+      {/* Sidebar */}
+      <aside
+        className="sf-dash-sidebar flex flex-col shrink-0"
+        style={{ width: '240px', height: '100vh', position: 'sticky', top: 0, background: 'white', borderRight: '1px solid var(--color-border)', overflow: 'hidden' }}
+      >
+        <div className="flex items-center gap-2.5 px-5 py-5 shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
+          <div className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" fill="white" />
+              <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M2 12l10 5 10-5" stroke="rgba(255,255,255,0.55)" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em', lineHeight: 1.2 }}>StudyFlow</div>
+            <div style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', marginTop: '1px' }}>University Edition</div>
+          </div>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-3 py-4" style={{ scrollbarWidth: 'none' }}>
+          {[
+            { label: 'Main', items: liveDashNavItems.slice(0, 4) },
+            { label: 'Insights', items: liveDashNavItems.slice(4, 6) },
+            { label: 'General', items: liveDashNavItems.slice(6) },
+          ].map((group) => (
+            <div key={group.label} className="mb-5">
+              <p style={{ fontSize: '9.5px', fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--color-text-muted)', padding: '0 12px', marginBottom: '4px' }}>
+                {group.label}
+              </p>
+              <div className="flex flex-col gap-0.5">
+                {group.items.map((item) => (
+                  <DashNavItem key={item.id} item={item} active={activeNav === item.id} onClick={() => onNavChange(item.id)} />
+                ))}
+              </div>
+            </div>
+          ))}
+
+          <div className="mt-2 p-4 rounded-[var(--radius-md)]" style={{ background: 'linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-secondary-light) 100%)', border: '1px solid var(--color-indigo-200)' }}>
+            <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '4px' }}>Upgrade to Pro</p>
+            <p style={{ fontSize: '11px', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '10px' }}>Unlock analytics, calendar sync, and priority reminders.</p>
+            <button className="w-full h-8 rounded-[var(--radius-sm)] text-white font-semibold cursor-pointer" style={{ fontSize: '11px', background: 'var(--color-primary)', border: 'none' }} onClick={() => onNavigate('landing')}>
+              View Plans
+            </button>
+          </div>
+        </nav>
+
+        <div className="shrink-0 px-3 py-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+          <button
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] transition-all duration-150 cursor-pointer text-left"
+            style={{ background: 'transparent', border: 'none', outline: 'none' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-border)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+          >
+            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white" style={{ background: 'linear-gradient(135deg, #818cf8, #7c3aed)', fontSize: '11px', fontWeight: 700 }}>{(getAuth()?.record.name || 'Student').split(/\s+/).map((x) => x[0]).join('').slice(0, 2).toUpperCase()}</div>
+            <div className="flex-1 min-w-0">
+              <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{getAuth()?.record.name || 'Student'}</p>
+              <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{getAuth()?.record.course || 'Course not set'} · {getAuth()?.record.year_of_study ? `Year ${getAuth()?.record.year_of_study}` : 'Year not set'}</p>
+            </div>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9" /></svg>
+          </button>
+        </div>
+      </aside>
+
+      {/* Content area */}
+      <div className="sf-dash-main flex-1 flex flex-col min-w-0">{children}</div>
+      <MobileBottomNav activeNav={activeNav} onNavChange={onNavChange} onNavigate={onNavigate} />
+    </div>
+  )
+}
+
+// ─── Add Assignment Modal ─────────────────────────────────────────────────────
+type ModalDemo = 'default' | 'filled' | 'error' | 'saving' | 'saved'
+
+interface SubTask { id: number; text: string; done: boolean }
+
+const MODULE_OPTIONS = [
+  { code: 'COMP3801', name: 'Database Systems',            color: '#3730a3' },
+  { code: 'COMP3820', name: 'Cybersecurity',               color: '#7c3aed' },
+  { code: 'COMP3900', name: 'Web Development',             color: '#0891b2' },
+  { code: 'BUSN2100', name: 'Business Computing',          color: '#d97706' },
+  { code: 'COMP2521', name: 'Algorithms & Data Structures',color: '#16a34a' },
+  { code: 'DSGN3010', name: 'UX & Interaction Design',     color: '#db2777' },
+  { code: 'COMP3231', name: 'Operating Systems',           color: '#059669' },
+  { code: 'COMP4418', name: 'Intro to Machine Learning',   color: '#6366f1' },
+]
+
+const REMINDER_OPTIONS = ['No reminder', '1 hour before', '1 day before', '3 days before', '1 week before']
+
+const FILLED_DEFAULTS = {
+  title: 'Operating Systems Lab Report',
+  module: 'COMP3231',
+  description: 'Document your implementation of a multi-threading scheduler in C, with a detailed performance analysis section benchmarking against the default OS scheduler.',
+  dueDate: '2025-11-05',
+  dueTime: '23:59',
+  priority: 'High' as AssignPriority,
+  hours: '6',
+  reminder: '1 day before',
+  subtasks: [
+    { id: 1, text: 'Set up C environment and repo', done: true },
+    { id: 2, text: 'Implement round-robin scheduler', done: true },
+    { id: 3, text: 'Run benchmarks against baseline', done: false },
+    { id: 4, text: 'Write performance analysis', done: false },
+    { id: 5, text: 'Proofread and submit', done: false },
+  ] as SubTask[],
+}
+
+function FieldLabel({ htmlFor, children, required }: { htmlFor: string; children: React.ReactNode; required?: boolean }) {
+  return (
+    <label htmlFor={htmlFor} style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--color-text-primary)', display: 'block', marginBottom: '6px', letterSpacing: '-0.005em' }}>
+      {children}
+      {required && <span style={{ color: 'var(--color-error)', marginLeft: '3px' }} aria-hidden="true">*</span>}
+    </label>
+  )
+}
+
+function FieldError({ id, msg }: { id: string; msg: string }) {
+  return (
+    <p id={id} role="alert" style={{ fontSize: '11.5px', color: 'var(--color-error)', marginTop: '5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+      {msg}
+    </p>
+  )
+}
+
+function inputStyle(hasError: boolean, extra?: React.CSSProperties): React.CSSProperties {
+  return {
+    width: '100%',
+    height: '40px',
+    padding: '0 12px',
+    borderRadius: 'var(--radius-md)',
+    border: hasError ? '1.5px solid var(--color-error)' : '1.5px solid var(--color-border)',
+    background: hasError ? '#fff8f8' : 'var(--color-background)',
+    color: 'var(--color-text-primary)',
+    fontSize: '13.5px',
+    outline: 'none',
+    boxSizing: 'border-box',
+    ...extra,
+  }
+}
+
+function textareaStyle(hasError: boolean): React.CSSProperties {
+  return {
+    width: '100%',
+    padding: '10px 12px',
+    borderRadius: 'var(--radius-md)',
+    border: hasError ? '1.5px solid var(--color-error)' : '1.5px solid var(--color-border)',
+    background: hasError ? '#fff8f8' : 'var(--color-background)',
+    color: 'var(--color-text-primary)',
+    fontSize: '13.5px',
+    outline: 'none',
+    resize: 'vertical' as const,
+    minHeight: '82px',
+    fontFamily: 'var(--font-sans)',
+    lineHeight: 1.6,
+    boxSizing: 'border-box' as const,
+  }
+}
+
+function AddAssignmentModal({ onClose, onSaved }: { onClose: () => void; onSaved: (a: AssignmentRecord) => void }) {
+  const [demo, setDemo] = useState<ModalDemo>('default')
+
+  // Form state
+  const [title, setTitle] = useState('')
+  const [module, setModule] = useState('')
+  const [description, setDescription] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [dueTime, setDueTime] = useState('')
+  const [priority, setPriority] = useState<AssignPriority | ''>('')
+  const [hours, setHours] = useState('')
+  const [reminder, setReminder] = useState('1 day before')
+  const [subtasks, setSubtasks] = useState<SubTask[]>([{ id: Date.now(), text: '', done: false }])
+  const [newTask, setNewTask] = useState('')
+
+  // UI state
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [toastVisible, setToastVisible] = useState(false)
+
+  // Sync from demo tab
+  const prevDemo = useState<ModalDemo>('default')[0]
+  const applyDemo = (d: ModalDemo) => {
+    setDemo(d)
+    setSaving(false)
+    setSaved(false)
+    setToastVisible(false)
+    setTouched({})
+    if (d === 'default') {
+      setTitle(''); setModule(''); setDescription(''); setDueDate(''); setDueTime(''); setPriority(''); setHours(''); setReminder('1 day before')
+      setSubtasks([{ id: 1, text: '', done: false }])
+    } else if (d === 'filled' || d === 'saving' || d === 'saved') {
+      setTitle(FILLED_DEFAULTS.title); setModule(FILLED_DEFAULTS.module); setDescription(FILLED_DEFAULTS.description)
+      setDueDate(FILLED_DEFAULTS.dueDate); setDueTime(FILLED_DEFAULTS.dueTime); setPriority(FILLED_DEFAULTS.priority)
+      setHours(FILLED_DEFAULTS.hours); setReminder(FILLED_DEFAULTS.reminder)
+      setSubtasks(FILLED_DEFAULTS.subtasks.map(s => ({ ...s })))
+      if (d === 'saving') setSaving(true)
+      if (d === 'saved') { setSaved(true); setToastVisible(true) }
+    } else if (d === 'error') {
+      setTitle(''); setModule(''); setDescription(''); setDueDate(''); setDueTime(''); setPriority(''); setHours(''); setReminder('No reminder')
+      setSubtasks([{ id: 1, text: '', done: false }])
+      setTouched({ title: true, module: true, dueDate: true, priority: true })
+    }
+  }
+
+  // Validation
+  const errors: Record<string, string> = {}
+  if (!title.trim()) errors.title = 'Assignment title is required.'
+  if (!module) errors.module = 'Please select a module.'
+  if (!dueDate) errors.dueDate = 'A due date is required.'
+  if (!priority) errors.priority = 'Please select a priority level.'
+
+  const showErr = (key: string) => (touched[key] || demo === 'error') && !!errors[key]
+
+  const handleBlur = (key: string) => setTouched((t) => ({ ...t, [key]: true }))
+
+  const handleSubmit = async () => {
+    setTouched({ title: true, module: true, dueDate: true, priority: true })
+    if (Object.keys(errors).length > 0) return
+    const mod = MODULE_OPTIONS.find((m) => m.code === module) || MODULE_OPTIONS[0]
+    try {
+      setSaving(true)
+      const dueAt = `${dueDate}T${dueTime || '23:59'}`
+      const record = await createAssignmentRecord({
+        title,
+        moduleName: mod.name,
+        moduleCode: mod.code,
+        moduleColor: mod.color,
+        description: description || 'No description provided.',
+        dueAt,
+        priority: priority as AssignPriority,
+        estimatedHours: Number(hours) || 0,
+        reminder,
+        subtasks: subtasks.map((task) => task.text),
+      })
+      onSaved(record)
+    } catch (error) {
+      window.alert(readableApiError(error))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const addSubtask = () => {
+    if (!newTask.trim()) return
+    setSubtasks((prev) => [...prev, { id: Date.now(), text: newTask.trim(), done: false }])
+    setNewTask('')
+  }
+
+  const toggleSubtask = (id: number) => setSubtasks((prev) => prev.map((s) => s.id === id ? { ...s, done: !s.done } : s))
+  const removeSubtask = (id: number) => setSubtasks((prev) => prev.filter((s) => s.id !== id))
+
+  const selectedMod = MODULE_OPTIONS.find((m) => m.code === module)
+
+  const demoTabs: { id: ModalDemo; label: string }[] = [
+    { id: 'default', label: 'Empty form' },
+    { id: 'filled',  label: 'Completed' },
+    { id: 'error',   label: 'Validation error' },
+    { id: 'saving',  label: 'Saving…' },
+    { id: 'saved',   label: 'Saved + toast' },
+  ]
+
+  // Trap focus: close on Escape
+  const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+
+  return (
+    <>
+      {/* Toast */}
+      <div
+        role="status"
+        aria-live="polite"
+        style={{
+          position: 'fixed', top: '24px', left: '50%', transform: `translateX(-50%) translateY(${toastVisible ? '0' : '-80px'})`,
+          zIndex: 60, transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+          display: 'flex', alignItems: 'center', gap: '10px',
+          background: 'white', border: '1.5px solid var(--color-success-light)',
+          borderRadius: 'var(--radius-lg)', padding: '12px 18px',
+          boxShadow: '0 8px 32px 0 rgba(22,163,74,0.18), 0 2px 8px -2px rgba(0,0,0,0.08)',
+          minWidth: '280px',
+        }}
+      >
+        <div className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0" style={{ background: 'var(--color-success-light)' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+        <div>
+          <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>Assignment saved!</p>
+          <p style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>It has been added to your Assignments page.</p>
+        </div>
+        <button
+          onClick={() => setToastVisible(false)}
+          style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '2px', lineHeight: 1 }}
+          aria-label="Dismiss notification"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </button>
+      </div>
+
+      {/* Backdrop */}
+      <div
+        role="presentation"
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(26,29,46,0.48)', backdropFilter: 'blur(3px)', zIndex: 40, transition: 'opacity 0.2s' }}
+      />
+
+      {/* Modal */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Add assignment"
+        onKeyDown={handleKeyDown}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 50,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '24px', pointerEvents: 'none',
+        }}
+      >
+        <div
+          className="sf-modal-panel"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: '100%', maxWidth: '640px', maxHeight: 'calc(100vh - 48px)',
+            background: 'white', borderRadius: 'var(--radius-xl)',
+            boxShadow: '0 24px 64px 0 rgba(26,29,46,0.22), 0 4px 16px -4px rgba(26,29,46,0.12)',
+            display: 'flex', flexDirection: 'column',
+            pointerEvents: 'auto', overflow: 'hidden',
+          }}
+        >
+          {/* ── Header ─────────────────────────────────────────────── */}
+          <div
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '20px 24px 18px',
+              borderBottom: '1px solid var(--color-border)',
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                width: '38px', height: '38px', borderRadius: 'var(--radius-md)', flexShrink: 0,
+                background: 'linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-secondary-light) 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                <line x1="13" y1="13" x2="18" y2="13" /><line x1="13" y1="17" x2="18" y2="17" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.015em', margin: 0 }}>
+                Add Assignment
+              </h2>
+              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                Track a new piece of coursework and set your deadline.
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Close modal"
+              style={{
+                width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', border: 'none',
+                background: 'var(--color-background)', color: 'var(--color-text-muted)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-border)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-background)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+
+          {/* ── Scrollable body ──────────────────────────────────────── */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
+            {/* Saved success banner */}
+            {saved && (
+              <div
+                role="status"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px',
+                  background: 'var(--color-success-light)', borderRadius: 'var(--radius-md)',
+                  border: '1px solid #86efac',
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                <div>
+                  <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-success-foreground)', lineHeight: 1.2 }}>Assignment saved successfully!</p>
+                  <p style={{ fontSize: '12px', color: '#166534', marginTop: '2px' }}>This assignment is now tracked in your Assignments page.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Error summary banner */}
+            {demo === 'error' && (
+              <div
+                role="alert"
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 14px',
+                  background: 'var(--color-error-light)', borderRadius: 'var(--radius-md)',
+                  border: '1px solid #fca5a5',
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" strokeWidth="2.5" strokeLinecap="round" style={{ marginTop: '1px', flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                <div>
+                  <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-error-foreground)', lineHeight: 1.2 }}>Please fix the errors below</p>
+                  <ul style={{ margin: '4px 0 0 0', padding: '0 0 0 14px' }}>
+                    {errors.title && <li style={{ fontSize: '12px', color: '#991b1b', lineHeight: 1.6 }}>{errors.title}</li>}
+                    {errors.module && <li style={{ fontSize: '12px', color: '#991b1b', lineHeight: 1.6 }}>{errors.module}</li>}
+                    {errors.dueDate && <li style={{ fontSize: '12px', color: '#991b1b', lineHeight: 1.6 }}>{errors.dueDate}</li>}
+                    {errors.priority && <li style={{ fontSize: '12px', color: '#991b1b', lineHeight: 1.6 }}>{errors.priority}</li>}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {/* Row 1: Title */}
+            <div>
+              <FieldLabel htmlFor="af-title" required>Assignment Title</FieldLabel>
+              <input
+                id="af-title"
+                type="text"
+                placeholder="e.g. Database Systems Report"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={() => handleBlur('title')}
+                aria-describedby={showErr('title') ? 'af-title-err' : undefined}
+                aria-invalid={showErr('title')}
+                disabled={saving || saved}
+                style={inputStyle(showErr('title'))}
+                onFocus={(e) => { if (!showErr('title')) { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.boxShadow = 'var(--shadow-focus)' } }}
+                onBlurCapture={(e) => { e.currentTarget.style.borderColor = showErr('title') ? 'var(--color-error)' : 'var(--color-border)'; e.currentTarget.style.boxShadow = 'none' }}
+              />
+              {showErr('title') && <FieldError id="af-title-err" msg={errors.title} />}
+            </div>
+
+            {/* Row 2: Module */}
+            <div>
+              <FieldLabel htmlFor="af-module" required>Module</FieldLabel>
+              <div className="relative">
+                {selectedMod && (
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '8px', height: '8px', borderRadius: '50%', background: selectedMod.color, zIndex: 1, pointerEvents: 'none' }} />
+                )}
+                <select
+                  id="af-module"
+                  value={module}
+                  onChange={(e) => setModule(e.target.value)}
+                  onBlur={() => handleBlur('module')}
+                  aria-describedby={showErr('module') ? 'af-module-err' : undefined}
+                  aria-invalid={showErr('module')}
+                  disabled={saving || saved}
+                  style={{ ...inputStyle(showErr('module'), { paddingLeft: selectedMod ? '28px' : '12px', appearance: 'none', cursor: 'pointer' }) }}
+                >
+                  <option value="">Select a module…</option>
+                  {MODULE_OPTIONS.map((m) => (
+                    <option key={m.code} value={m.code}>{m.code} – {m.name}</option>
+                  ))}
+                </select>
+                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9" /></svg>
+                </span>
+              </div>
+              {showErr('module') && <FieldError id="af-module-err" msg={errors.module} />}
+            </div>
+
+            {/* Row 3: Description */}
+            <div>
+              <FieldLabel htmlFor="af-desc">Description</FieldLabel>
+              <textarea
+                id="af-desc"
+                placeholder="Briefly describe the assignment, any specific requirements, or notes…"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={saving || saved}
+                style={textareaStyle(false)}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.boxShadow = 'var(--shadow-focus)' }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.boxShadow = 'none' }}
+              />
+            </div>
+
+            {/* Row 4: Due date + time */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <FieldLabel htmlFor="af-due-date" required>Due Date</FieldLabel>
+                <input
+                  id="af-due-date"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  onBlur={() => handleBlur('dueDate')}
+                  aria-describedby={showErr('dueDate') ? 'af-due-date-err' : undefined}
+                  aria-invalid={showErr('dueDate')}
+                  disabled={saving || saved}
+                  style={inputStyle(showErr('dueDate'))}
+                  onFocus={(e) => { if (!showErr('dueDate')) { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.boxShadow = 'var(--shadow-focus)' } }}
+                  onBlurCapture={(e) => { e.currentTarget.style.borderColor = showErr('dueDate') ? 'var(--color-error)' : 'var(--color-border)'; e.currentTarget.style.boxShadow = 'none' }}
+                />
+                {showErr('dueDate') && <FieldError id="af-due-date-err" msg={errors.dueDate} />}
+              </div>
+              <div>
+                <FieldLabel htmlFor="af-due-time">Due Time</FieldLabel>
+                <input
+                  id="af-due-time"
+                  type="time"
+                  value={dueTime}
+                  onChange={(e) => setDueTime(e.target.value)}
+                  disabled={saving || saved}
+                  style={inputStyle(false)}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.boxShadow = 'var(--shadow-focus)' }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.boxShadow = 'none' }}
+                />
+              </div>
+            </div>
+
+            {/* Row 5: Priority + Estimated hours */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              {/* Priority */}
+              <div>
+                <FieldLabel htmlFor="af-priority" required>Priority</FieldLabel>
+                <div
+                  id="af-priority"
+                  role="group"
+                  aria-label="Priority level"
+                  aria-describedby={showErr('priority') ? 'af-priority-err' : undefined}
+                  style={{ display: 'flex', gap: '6px' }}
+                >
+                  {(['High', 'Medium', 'Low'] as AssignPriority[]).map((p) => {
+                    const active = priority === p
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        aria-pressed={active}
+                        disabled={saving || saved}
+                        onClick={() => setPriority(p)}
+                        style={{
+                          flex: 1, height: '38px', borderRadius: 'var(--radius-md)', fontSize: '12.5px', fontWeight: 700,
+                          cursor: saving || saved ? 'default' : 'pointer',
+                          border: active ? 'none' : `1.5px solid ${showErr('priority') ? 'var(--color-error)' : 'var(--color-border)'}`,
+                          background: active ? PRIORITY_STYLE[p].bg : 'var(--color-background)',
+                          color: active ? PRIORITY_STYLE[p].color : showErr('priority') ? 'var(--color-error)' : 'var(--color-text-muted)',
+                          transition: 'all 0.15s',
+                          outline: active ? `2px solid ${PRIORITY_STYLE[p].color}` : 'none',
+                          outlineOffset: '1px',
+                        }}
+                      >
+                        {p}
+                      </button>
+                    )
+                  })}
+                </div>
+                {showErr('priority') && <FieldError id="af-priority-err" msg={errors.priority} />}
+              </div>
+
+              {/* Estimated hours */}
+              <div>
+                <FieldLabel htmlFor="af-hours">Estimated Study Hours</FieldLabel>
+                <div className="relative">
+                  <input
+                    id="af-hours"
+                    type="number"
+                    min="0.5"
+                    max="200"
+                    step="0.5"
+                    placeholder="e.g. 6"
+                    value={hours}
+                    onChange={(e) => setHours(e.target.value)}
+                    disabled={saving || saved}
+                    style={inputStyle(false, { paddingRight: '40px' })}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.boxShadow = 'var(--shadow-focus)' }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.boxShadow = 'none' }}
+                  />
+                  <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', fontWeight: 600, color: 'var(--color-text-muted)', pointerEvents: 'none' }}>hrs</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 6: Subtask checklist */}
+            <div>
+              <FieldLabel htmlFor="af-new-task">Subtasks</FieldLabel>
+              <div
+                style={{
+                  borderRadius: 'var(--radius-md)', border: '1.5px solid var(--color-border)',
+                  background: 'var(--color-background)', overflow: 'hidden',
+                }}
+              >
+                {/* Existing tasks */}
+                {subtasks.filter((s) => s.text).map((s) => (
+                  <div
+                    key={s.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '9px 12px', borderBottom: '1px solid var(--color-border)',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleSubtask(s.id)}
+                      disabled={saving || saved}
+                      aria-label={`Mark "${s.text}" as ${s.done ? 'incomplete' : 'complete'}`}
+                      style={{
+                        width: '17px', height: '17px', borderRadius: '5px', flexShrink: 0,
+                        border: s.done ? 'none' : '1.5px solid var(--color-border-strong)',
+                        background: s.done ? 'var(--color-primary)' : 'white',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                    >
+                      {s.done && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>}
+                    </button>
+                    <span style={{
+                      flex: 1, fontSize: '13px', color: s.done ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
+                      textDecoration: s.done ? 'line-through' : 'none', lineHeight: 1.4,
+                    }}>
+                      {s.text}
+                    </span>
+                    {!saving && !saved && (
+                      <button
+                        type="button"
+                        onClick={() => removeSubtask(s.id)}
+                        aria-label={`Remove subtask "${s.text}"`}
+                        style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '2px', lineHeight: 1 }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-error)' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-muted)' }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {/* Add new task row */}
+                {!saving && !saved && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px' }}>
+                    <div style={{ width: '17px', height: '17px', borderRadius: '5px', border: '1.5px dashed var(--color-border-strong)', flexShrink: 0 }} />
+                    <input
+                      id="af-new-task"
+                      type="text"
+                      placeholder="Add another subtask…"
+                      value={newTask}
+                      onChange={(e) => setNewTask(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }}
+                      style={{
+                        flex: 1, border: 'none', background: 'transparent',
+                        fontSize: '13px', color: 'var(--color-text-primary)', outline: 'none',
+                        fontFamily: 'var(--font-sans)',
+                      }}
+                    />
+                    {newTask.trim() && (
+                      <button
+                        type="button"
+                        onClick={addSubtask}
+                        style={{
+                          fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px',
+                          background: 'var(--color-primary-light)', color: 'var(--color-primary)',
+                          border: 'none', cursor: 'pointer',
+                        }}
+                      >
+                        Add
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+              <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '5px' }}>
+                Press Enter or click Add to save each subtask.
+              </p>
+            </div>
+
+            {/* Row 7: Reminder */}
+            <div>
+              <FieldLabel htmlFor="af-reminder">Reminder</FieldLabel>
+              <div className="relative">
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+                </span>
+                <select
+                  id="af-reminder"
+                  value={reminder}
+                  onChange={(e) => setReminder(e.target.value)}
+                  disabled={saving || saved}
+                  style={{ ...inputStyle(false, { paddingLeft: '32px', appearance: 'none', cursor: 'pointer' }) }}
+                >
+                  {REMINDER_OPTIONS.map((r) => <option key={r}>{r}</option>)}
+                </select>
+                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9" /></svg>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Footer ─────────────────────────────────────────────── */}
+          <div
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '16px 24px', borderTop: '1px solid var(--color-border)',
+              flexShrink: 0, gap: '12px',
+            }}
+          >
+            <p style={{ fontSize: '11.5px', color: 'var(--color-text-muted)' }}>
+              Fields marked <span style={{ color: 'var(--color-error)', fontWeight: 700 }}>*</span> are required.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving}
+                style={{
+                  height: '38px', padding: '0 18px', borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-background)', border: '1.5px solid var(--color-border)',
+                  color: 'var(--color-text-secondary)', fontSize: '13.5px', fontWeight: 600,
+                  cursor: saving ? 'default' : 'pointer', transition: 'all 0.15s',
+                }}
+                onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = 'var(--color-border)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-background)' }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={saved ? onClose : handleSubmit}
+                disabled={saving}
+                style={{
+                  height: '38px', padding: '0 22px', borderRadius: 'var(--radius-md)',
+                  background: saved ? 'var(--color-success)' : 'var(--color-primary)',
+                  border: 'none', color: 'white',
+                  fontSize: '13.5px', fontWeight: 700,
+                  cursor: saving ? 'default' : 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  transition: 'background 0.2s, transform 0.1s',
+                  opacity: saving ? 0.85 : 1,
+                  minWidth: '148px', justifyContent: 'center',
+                }}
+                onMouseEnter={(e) => { if (!saving && !saved) e.currentTarget.style.background = 'var(--color-primary-hover)' }}
+                onMouseLeave={(e) => { if (!saving && !saved) e.currentTarget.style.background = 'var(--color-primary)' }}
+              >
+                {saving ? (
+                  <>
+                    {/* Spinner */}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" style={{ animation: 'spin 0.9s linear infinite' }}>
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                    </svg>
+                    Saving…
+                  </>
+                ) : saved ? (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    Done
+                  </>
+                ) : (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    Save Assignment
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </>
+  )
+}
+
+// ── Assignments Page ───────────────────────────────────────────────────────────
+function AssignmentsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const [records, setRecords] = useState<AssignmentRecord[]>([])
+  const [search, setSearch] = useState('')
+  const [filterStatus, setFilterStatus] = useState('All')
+  const [filterPriority, setFilterPriority] = useState('All')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [showModal, setShowModal] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  const load = async () => {
+    try { setLoading(true); setRecords(await fetchAssignments()); setError('') }
+    catch (e) { setError(readableApiError(e)) }
+    finally { setLoading(false) }
+  }
+  useEffect(() => { void load() }, [])
+
+  const assignments = useMemo(() => records.map(toAssignment), [records])
+  const filtered = assignments.filter((a) => {
+    const q = search.toLowerCase()
+    return (filterStatus === 'All' || a.status === filterStatus) && (filterPriority === 'All' || a.priority === filterPriority) && (!q || `${a.title} ${a.module} ${a.moduleCode}`.toLowerCase().includes(q))
+  })
+  const openDetail = (id: string) => { localStorage.setItem('studyflow_selected_assignment', id); onNavigate('assignment-detail') }
+
+  return (
+    <DashShell activeNav="assignments" onNavChange={(n) => navigateFromDash(n, onNavigate)} onNavigate={onNavigate}>
+      <PageHeader title="Assignments" subtitle={`${assignments.length} total assignments`} action={<Button size="sm" onClick={() => setShowModal(true)}>Add Assignment</Button>} />
+      <main className="flex-1 overflow-y-auto px-8 py-6" onClick={() => setOpenMenu(null)}>
+        <div className="flex flex-wrap gap-3 mb-5">
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search assignments…" className="h-10 px-4 rounded-[var(--radius-md)] text-sm" style={{ minWidth: 260, border: '1.5px solid var(--color-border)', outline: 'none' }} />
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="h-10 px-3 rounded-[var(--radius-md)]" style={{ border: '1.5px solid var(--color-border)' }}>{['All','Not Started','In Progress','Completed','Overdue'].map((x) => <option key={x}>{x}</option>)}</select>
+          <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="h-10 px-3 rounded-[var(--radius-md)]" style={{ border: '1.5px solid var(--color-border)' }}>{['All','High','Medium','Low'].map((x) => <option key={x}>{x}</option>)}</select>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}><Button variant={viewMode === 'grid' ? 'primary' : 'ghost'} size="sm" onClick={() => setViewMode('grid')}>Grid</Button><Button variant={viewMode === 'list' ? 'primary' : 'ghost'} size="sm" onClick={() => setViewMode('list')}>List</Button></div>
+        </div>
+        {error && <p style={{ padding: 12, background: 'var(--color-error-light)', color: 'var(--color-error)', borderRadius: 8, marginBottom: 16 }}>{error}</p>}
+        {success && <p role="status" style={{ padding: 12, background: 'var(--color-success-light)', color: 'var(--color-success-foreground)', borderRadius: 8, marginBottom: 16 }}>{success}</p>}
+        {loading ? <Placeholder label="Loading assignments…" height={220} accent /> : filtered.length === 0 ? <div className="bg-white rounded-[var(--radius-lg)]" style={{ border: '1px solid var(--color-border)' }}><EmptyState onAdd={() => setShowModal(true)} /></div> : viewMode === 'grid' ? <div className="grid grid-cols-3 gap-5">{filtered.map((a) => <div key={a.id} onClick={() => openDetail(a.id)} style={{ cursor: 'pointer' }}><AssignmentGridCard a={a} openMenu={openMenu} onMenuToggle={(id) => setOpenMenu(openMenu === id ? null : id)} /></div>)}</div> : <div className="bg-white rounded-[var(--radius-lg)] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>{filtered.map((a) => <div key={a.id} onClick={() => openDetail(a.id)} style={{ cursor: 'pointer' }}><AssignmentListRow a={a} openMenu={openMenu} onMenuToggle={(id) => setOpenMenu(openMenu === id ? null : id)} /></div>)}</div>}
+      </main>
+      {showModal && <AddAssignmentModal onClose={() => setShowModal(false)} onSaved={(record) => { setRecords((prev) => [...prev, record]); window.dispatchEvent(new Event('studyflow:assignments-changed')); setSuccess('Assignment saved successfully.'); setShowModal(false); window.setTimeout(() => setSuccess(''), 3500) }} />}
+    </DashShell>
+  )
+}
+
+// ─── Assignment Detail Page ───────────────────────────────────────────────────
+interface DetailSubTask { id: number; text: string; done: boolean }
+interface StudySession { day: string; date: string; time: string; duration: string; location: string; done: boolean }
+interface UploadedFile { id: number; name: string; size: string; type: 'pdf' | 'docx' | 'png' | 'zip' | 'xlsx' }
+interface ActivityEvent { id: number; icon: string; color: string; title: string; detail: string; time: string }
+
+const DETAIL_SUBTASKS: DetailSubTask[] = [
+  { id: 1, text: 'Review assignment requirements',      done: true  },
+  { id: 2, text: 'Research database normalisation',     done: true  },
+  { id: 3, text: 'Create entity relationship diagram',  done: true  },
+  { id: 4, text: 'Build database schema',               done: false },
+  { id: 5, text: 'Write evaluation',                    done: false },
+  { id: 6, text: 'Proofread final report',              done: false },
+]
+
+const STUDY_SESSIONS: StudySession[] = [
+  { day: 'Mon', date: '20 Oct', time: '10:00–12:00', duration: '2h', location: 'Library, Floor 3', done: true  },
+  { day: 'Wed', date: '22 Oct', time: '14:00–16:30', duration: '2.5h', location: 'Home – quiet room', done: true  },
+  { day: 'Fri', date: '24 Oct', time: '09:00–11:00', duration: '2h', location: 'Campus café', done: false },
+  { day: 'Sun', date: '26 Oct', time: '13:00–15:00', duration: '2h', location: 'Library, Floor 3', done: false },
+]
+
+const UPLOADED_FILES: UploadedFile[] = [
+  { id: 1, name: 'DB_Report_Draft_v2.docx', size: '1.2 MB', type: 'docx' },
+  { id: 2, name: 'ER_Diagram_Final.png',    size: '340 KB', type: 'png'  },
+  { id: 3, name: 'Schema_Script.zip',       size: '88 KB',  type: 'zip'  },
+  { id: 4, name: 'Marking_Rubric.pdf',      size: '210 KB', type: 'pdf'  },
+]
+
+const ACTIVITY_LOG: ActivityEvent[] = [
+  { id: 1, icon: 'check',   color: '#16a34a', title: 'Subtask completed',       detail: '"Research database normalisation" marked done',      time: '2h ago'   },
+  { id: 2, icon: 'upload',  color: '#3730a3', title: 'File uploaded',            detail: 'ER_Diagram_Final.png added to files',                time: '3h ago'   },
+  { id: 3, icon: 'clock',   color: '#7c3aed', title: 'Study session logged',     detail: 'Wed 22 Oct · 14:00–16:30 · 2.5 hrs',               time: 'Yesterday' },
+  { id: 4, icon: 'edit',    color: '#d97706', title: 'Notes updated',            detail: 'Added normalisation references',                     time: 'Yesterday' },
+  { id: 5, icon: 'check',   color: '#16a34a', title: 'Subtask completed',        detail: '"Create entity relationship diagram" marked done',   time: '2 days ago'},
+  { id: 6, icon: 'plus',    color: '#0891b2', title: 'Assignment created',       detail: 'Database Systems Report added to Assignments',       time: '5 days ago'},
+]
+
+function FileTypeChip({ type }: { type: UploadedFile['type'] }) {
+  const map: Record<UploadedFile['type'], { bg: string; color: string }> = {
+    pdf:  { bg: '#fee2e2', color: '#991b1b' },
+    docx: { bg: '#dbeafe', color: '#1e40af' },
+    png:  { bg: '#dcfce7', color: '#14532d' },
+    zip:  { bg: '#fef3c7', color: '#78350f' },
+    xlsx: { bg: '#d1fae5', color: '#065f46' },
+  }
+  return (
+    <span style={{ fontSize: '9.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '5px', letterSpacing: '0.04em', textTransform: 'uppercase', background: map[type].bg, color: map[type].color }}>
+      {type}
+    </span>
+  )
+}
+
+function ActivityIcon({ icon, color }: { icon: string; color: string }) {
+  const icons: Record<string, React.ReactNode> = {
+    check:  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>,
+    upload: <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>,
+    clock:  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 15" /></svg>,
+    edit:   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>,
+    plus:   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>,
+  }
+  return (
+    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color }}>
+      {icons[icon]}
+    </div>
+  )
+}
+
+function SectionCard({ title, icon, children, action }: { title: string; icon: React.ReactNode; children: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div style={{ background: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--color-border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ color: 'var(--color-primary)' }}>{icon}</span>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em' }}>{title}</span>
+        </div>
+        {action}
+      </div>
+      <div>{children}</div>
+    </div>
+  )
+}
+
+function AssignmentDetailPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const selectedId = localStorage.getItem('studyflow_selected_assignment') || window.location.pathname.split('/').filter(Boolean).pop() || ''
+  const [assignment, setAssignment] = useState<AssignmentRecord | null>(null)
+  const [tasks, setTasks] = useState<AssignmentTaskRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [notes, setNotes] = useState('')
+  const [newTaskTitle, setNewTaskTitle] = useState('')
+
+  const load = async () => {
+    if (!selectedId) { setError('No assignment selected.'); setLoading(false); return }
+    try {
+      const [a, t] = await Promise.all([fetchAssignment(selectedId), listTasks(selectedId)])
+      setAssignment(a); setTasks(t); setNotes(a.notes || '')
+    } catch (e) { setError(readableApiError(e)) }
+    finally { setLoading(false) }
+  }
+  useEffect(() => { void load() }, [selectedId])
+
+  const toggle = async (task: AssignmentTaskRecord) => {
+    try {
+      const updated = await updateTask(task.id, !task.done)
+      const next = tasks.map((t) => t.id === task.id ? updated : t)
+      setTasks(next)
+      const pct = next.length ? Math.round((next.filter((t) => t.done).length / next.length) * 100) : 0
+      const status = pct === 100 ? 'Completed' : pct > 0 ? 'In Progress' : 'Not Started'
+      const a = await updateAssignmentRecord(selectedId, { progress: pct, status } as Partial<AssignmentRecord>)
+      setAssignment(a)
+    } catch (e) { setError(readableApiError(e)) }
+  }
+
+  const saveNotes = async () => {
+    if (!assignment) return
+    try { setSaving(true); setAssignment(await updateAssignmentRecord(assignment.id, { notes } as Partial<AssignmentRecord>)) }
+    catch (e) { setError(readableApiError(e)) }
+    finally { setSaving(false) }
+  }
+
+  const markComplete = async () => {
+    if (!assignment) return
+    try { setAssignment(await updateAssignmentRecord(assignment.id, { status: 'Completed', progress: 100 } as Partial<AssignmentRecord>)) }
+    catch (e) { setError(readableApiError(e)) }
+  }
+
+  const editAssignment = async () => {
+    if (!assignment) return
+    const title = window.prompt('Assignment title', assignment.title)?.trim()
+    if (!title) return
+    const description = window.prompt('Description', assignment.description || '') ?? assignment.description
+    try { setAssignment(await updateAssignmentRecord(assignment.id, { title, description } as Partial<AssignmentRecord>)) }
+    catch (e) { setError(readableApiError(e)) }
+  }
+
+  const removeAssignment = async () => {
+    if (!assignment || !window.confirm('Delete this assignment and its subtasks?')) return
+    try { await deleteAssignmentRecord(assignment.id); window.dispatchEvent(new Event('studyflow:assignments-changed')); localStorage.removeItem('studyflow_selected_assignment'); onNavigate('assignments-page') }
+    catch (e) { setError(readableApiError(e)) }
+  }
+
+  const createTask = async () => {
+    const title = newTaskTitle.trim()
+    if (!assignment || !title) return
+    try { const task = await addTask(assignment.id, title, tasks.length); setTasks((prev) => [...prev, task]); setNewTaskTitle('') }
+    catch (e) { setError(readableApiError(e)) }
+  }
+
+  return (
+    <DashShell activeNav="assignments" onNavChange={(n) => navigateFromDash(n, onNavigate)} onNavigate={onNavigate}>
+      <PageHeader title={assignment?.title || 'Assignment'} subtitle={assignment ? `${assignment.module_code} · due ${new Date(assignment.due_at).toLocaleString('en-GB')}` : undefined} action={<div className="flex gap-2"><Button variant="ghost" size="sm" onClick={() => onNavigate('assignments-page')}>Back</Button><Button variant="outline" size="sm" onClick={editAssignment} disabled={!assignment}>Edit</Button><Button variant="danger" size="sm" onClick={removeAssignment} disabled={!assignment}>Delete</Button><Button size="sm" onClick={markComplete} disabled={!assignment || assignment.status === 'Completed'}>{assignment?.status === 'Completed' ? 'Completed' : 'Mark Complete'}</Button></div>} />
+      <main className="flex-1 overflow-y-auto px-8 py-6">
+        {error && <p style={{ padding: 12, background: 'var(--color-error-light)', color: 'var(--color-error)', borderRadius: 8, marginBottom: 16 }}>{error}</p>}
+        {loading ? <Placeholder label="Loading assignment…" height={260} accent /> : !assignment ? <EmptyState onAdd={() => onNavigate('assignments-page')} /> : <div className="grid grid-cols-[2fr_1fr] gap-6">
+          <div className="flex flex-col gap-5">
+            <SectionCard title="Overview" icon={<Icon size={14}>{Icons.book}</Icon>}><div style={{ padding: 18 }}><div className="flex gap-2 mb-4"><StatusLabel variant={assignment.status === 'Completed' ? 'success' : assignment.status === 'Overdue' ? 'error' : 'primary'}>{assignment.status}</StatusLabel><StatusLabel variant={assignment.priority === 'High' ? 'error' : assignment.priority === 'Medium' ? 'warning' : 'success'}>{assignment.priority} priority</StatusLabel></div><p style={{ fontSize: 13.5, lineHeight: 1.7, color: 'var(--color-text-secondary)' }}>{assignment.description || 'No description provided.'}</p><div style={{ marginTop: 18 }}><div className="flex justify-between mb-6"><span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Progress</span><strong>{assignment.progress}%</strong></div><div style={{ height: 8, borderRadius: 999, background: 'var(--color-border)' }}><div style={{ height: '100%', width: `${assignment.progress}%`, borderRadius: 999, background: 'var(--color-primary)' }} /></div></div></div></SectionCard>
+            <SectionCard title="Subtasks" icon={<Icon size={14}>{Icons.check}</Icon>}><div>{tasks.length === 0 ? <p style={{ padding: 18, color: 'var(--color-text-muted)', fontSize: 13 }}>No subtasks were added.</p> : tasks.map((t) => <label key={t.id} className="flex items-center gap-3 px-5 py-3 cursor-pointer" style={{ borderBottom: '1px solid var(--color-border)' }}><input type="checkbox" checked={t.done} onChange={() => void toggle(t)} /><span style={{ fontSize: 13.5, textDecoration: t.done ? 'line-through' : 'none', color: t.done ? 'var(--color-text-muted)' : 'var(--color-text-primary)' }}>{t.title}</span></label>)}<div className="flex gap-2 p-4"><input value={newTaskTitle} onChange={(e)=>setNewTaskTitle(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter')void createTask()}} placeholder="Add a subtask" style={{flex:1,height:38,border:'1.5px solid var(--color-border)',borderRadius:8,padding:'0 10px'}}/><Button size="sm" onClick={createTask}>Add</Button></div></div></SectionCard>
+          </div>
+          <div className="flex flex-col gap-5">
+            <SectionCard title="Notes" icon={<Icon size={14}>{Icons.tasks}</Icon>}><div style={{ padding: 18 }}><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={10} style={{ width: '100%', resize: 'vertical', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: 10, fontFamily: 'inherit' }} /><Button size="sm" className="w-full mt-3" onClick={saveNotes} disabled={saving}>{saving ? 'Saving…' : 'Save Notes'}</Button></div></SectionCard>
+            <SectionCard title="Details" icon={<Icon size={14}>{Icons.calendar}</Icon>}><div style={{ padding: 18, display: 'grid', gap: 12, fontSize: 13 }}><div><strong>Module</strong><p style={{ color: 'var(--color-text-muted)' }}>{assignment.module_name} ({assignment.module_code})</p></div><div><strong>Due</strong><p style={{ color: 'var(--color-text-muted)' }}>{new Date(assignment.due_at).toLocaleString('en-GB')}</p></div><div><strong>Estimated effort</strong><p style={{ color: 'var(--color-text-muted)' }}>{assignment.estimated_hours || 0} hours</p></div></div></SectionCard>
+          </div>
+        </div>}
+      </main>
+    </DashShell>
+  )
+}
+
+// ─── Analytics Page ───────────────────────────────────────────────────────────
+
+// ── Tiny chart primitives (no library) ───────────────────────────────────────
+
+/** Bar chart: values[] mapped to a given height/width canvas */
+function BarChart({
+  data,
+  color = 'var(--color-primary)',
+  height = 140,
+  barRadius = 6,
+  labelKey,
+  valueKey,
+  accent,
+}: {
+  data: { label: string; value: number; accent?: boolean }[]
+  color?: string
+  height?: number
+  barRadius?: number
+  labelKey?: string
+  valueKey?: string
+  accent?: string
+}) {
+  const max = Math.max(...data.map((d) => d.value), 1)
+  const gap = 8
+  return (
+    <div style={{ width: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: `${gap}px`, height: `${height}px`, width: '100%' }}>
+        {data.map((d, i) => {
+          const barH = Math.max((d.value / max) * height, d.value > 0 ? 4 : 0)
+          const isAccent = d.accent
+          return (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '100%', justifyContent: 'flex-end' }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: isAccent ? (accent || color) : 'var(--color-text-muted)', lineHeight: 1, marginBottom: '2px' }}>
+                {d.value > 0 ? d.value : ''}
+              </span>
+              <div
+                style={{
+                  width: '100%', height: `${barH}px`,
+                  borderRadius: `${barRadius}px ${barRadius}px 2px 2px`,
+                  background: isAccent
+                    ? (accent || 'var(--color-secondary)')
+                    : color,
+                  opacity: isAccent ? 1 : 0.72,
+                  transition: 'height 0.4s cubic-bezier(0.34,1.2,0.64,1)',
+                }}
+              />
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ display: 'flex', gap: `${gap}px`, marginTop: '8px' }}>
+        {data.map((d, i) => (
+          <div key={i} style={{ flex: 1, textAlign: 'center' }}>
+            <span style={{ fontSize: '10.5px', fontWeight: 600, color: d.accent ? 'var(--color-text-primary)' : 'var(--color-text-muted)' }}>
+              {d.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** Horizontal bar chart for modules */
+function HorizBar({ label, value, max, color, pct }: { label: string; value: string; max: number; color: string; pct: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--color-text-secondary)', width: '160px', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+      <div style={{ flex: 1, height: '8px', borderRadius: '9999px', background: 'var(--color-border)', overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, borderRadius: '9999px', background: color, transition: 'width 0.5s cubic-bezier(0.34,1.2,0.64,1)' }} />
+      </div>
+      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-primary)', width: '38px', textAlign: 'right', flexShrink: 0 }}>{value}</span>
+    </div>
+  )
+}
+
+/** Donut-style ring for a single percentage */
+function DonutRing({ pct, color, size = 96, stroke = 10 }: { pct: number; color: string; size?: number; stroke?: number }) {
+  const r = (size - stroke) / 2
+  const circ = 2 * Math.PI * r
+  const dash = (pct / 100) * circ
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }} aria-hidden="true">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-border)" strokeWidth={stroke} />
+      <circle
+        cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke={color} strokeWidth={stroke}
+        strokeDasharray={`${dash} ${circ - dash}`}
+        strokeLinecap="round"
+        style={{ transition: 'stroke-dasharray 0.6s cubic-bezier(0.34,1.2,0.64,1)' }}
+      />
+    </svg>
+  )
+}
+
+/** Sparkline for a small trend line */
+function Sparkline({ values, color = 'var(--color-primary)', height = 36 }: { values: number[]; color?: string; height?: number }) {
+  const w = 80
+  const max = Math.max(...values, 1)
+  const min = Math.min(...values)
+  const range = max - min || 1
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * w
+    const y = height - ((v - min) / range) * (height - 4) - 2
+    return `${x},${y}`
+  }).join(' ')
+  return (
+    <svg width={w} height={height} viewBox={`0 0 ${w} ${height}`} aria-hidden="true" style={{ display: 'block' }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+// ── Analytics data ────────────────────────────────────────────────────────────
+const STUDY_HOURS_7D = [
+  { label: 'Mon', value: 1.5, accent: false },
+  { label: 'Tue', value: 3,   accent: false },
+  { label: 'Wed', value: 2.5, accent: false },
+  { label: 'Thu', value: 4,   accent: false },
+  { label: 'Fri', value: 2,   accent: false },
+  { label: 'Sat', value: 5,   accent: true  },
+  { label: 'Sun', value: 3.5, accent: false },
+]
+
+const ASSIGNMENTS_BY_MONTH = [
+  { label: 'May',  value: 2,  accent: false },
+  { label: 'Jun',  value: 3,  accent: false },
+  { label: 'Jul',  value: 1,  accent: false },
+  { label: 'Aug',  value: 4,  accent: false },
+  { label: 'Sep',  value: 5,  accent: false },
+  { label: 'Oct',  value: 6,  accent: true  },
+  { label: 'Nov',  value: 2,  accent: false },
+]
+
+const PRODUCTIVITY_BY_DAY = [
+  { label: 'Mon', value: 72, accent: false },
+  { label: 'Tue', value: 85, accent: false },
+  { label: 'Wed', value: 68, accent: false },
+  { label: 'Thu', value: 91, accent: true  },
+  { label: 'Fri', value: 60, accent: false },
+  { label: 'Sat', value: 88, accent: false },
+  { label: 'Sun', value: 74, accent: false },
+]
+
+const MODULE_HOURS = [
+  { label: 'Database Systems',          hours: 18, color: '#3730a3', pct: 100 },
+  { label: 'Web Development',           hours: 14, color: '#0891b2', pct: 78  },
+  { label: 'Cybersecurity',             hours: 12, color: '#7c3aed', pct: 67  },
+  { label: 'Algorithms & Data Struct.', hours: 10, color: '#16a34a', pct: 56  },
+  { label: 'Operating Systems',         hours: 8,  color: '#059669', pct: 44  },
+  { label: 'UX & Interaction Design',   hours: 6,  color: '#db2777', pct: 33  },
+]
+
+const WEEKLY_GOALS = [
+  { label: 'Study hours',      current: 21.5, target: 25,  unit: 'h',  color: 'var(--color-primary)'   },
+  { label: 'Sessions logged',  current: 8,    target: 10,  unit: '',   color: 'var(--color-secondary)'  },
+  { label: 'Assignments done', current: 3,    target: 4,   unit: '',   color: '#0891b2'                 },
+  { label: 'Focus streaks',    current: 5,    target: 5,   unit: '',   color: 'var(--color-success)'    },
+]
+
+interface Achievement {
+  id: string; icon: React.ReactNode; label: string; detail: string
+  earned: boolean; color: string; bg: string; date?: string
+}
+
+const ACHIEVEMENTS: Achievement[] = [
+  {
+    id: '1',
+    label: '5-Day Study Streak',
+    detail: 'Studied every day for 5 days in a row',
+    earned: true, date: '22 Oct',
+    color: '#d97706', bg: '#fef3c7',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>,
+  },
+  {
+    id: '2',
+    label: 'Early Submission',
+    detail: 'Submitted an assignment 3+ days early',
+    earned: true, date: '18 Oct',
+    color: '#3730a3', bg: '#e0e7ff',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
+  },
+  {
+    id: '3',
+    label: '10 Focus Sessions',
+    detail: 'Completed ten timed study sessions',
+    earned: true, date: '20 Oct',
+    color: '#7c3aed', bg: '#ede9fe',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>,
+  },
+  {
+    id: '4',
+    label: 'Weekly Goal Completed',
+    detail: 'Hit 100% of your weekly study goal',
+    earned: true, date: '13 Oct',
+    color: '#16a34a', bg: '#dcfce7',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>,
+  },
+  {
+    id: '5',
+    label: 'Night Owl',
+    detail: 'Log 5 study sessions after 9 pm',
+    earned: false,
+    color: '#64748b', bg: '#f1f5f9',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>,
+  },
+  {
+    id: '6',
+    label: 'Module Master',
+    detail: 'Score 90%+ on three module assignments',
+    earned: false,
+    color: '#64748b', bg: '#f1f5f9',
+    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c3 3 9 3 12 0v-5" /></svg>,
+  },
+]
+
+// ── Chart card wrapper ────────────────────────────────────────────────────────
+function ChartCard({ title, subtitle, children, action }: { title: string; subtitle?: string; children: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div style={{ background: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-card)', padding: '20px 22px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '18px' }}>
+        <div>
+          <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em', margin: 0 }}>{title}</p>
+          {subtitle && <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>{subtitle}</p>}
+        </div>
+        {action}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+// ── Analytics summary card ────────────────────────────────────────────────────
+function StatCard({ label, value, sub, delta, deltaUp, color, bg, sparkValues, icon }: {
+  label: string; value: string; sub: string; delta: string; deltaUp: boolean
+  color: string; bg: string; sparkValues: number[]; icon: React.ReactNode
+}) {
+  return (
+    <div style={{ background: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-card)', padding: '18px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <div style={{ width: '38px', height: '38px', borderRadius: 'var(--radius-sm)', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
+          {icon}
+        </div>
+        <Sparkline values={sparkValues} color={color} />
+      </div>
+      <p style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-text-primary)', letterSpacing: '-0.04em', lineHeight: 1, marginBottom: '4px' }}>{value}</p>
+      <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '8px' }}>{label}</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{sub}</span>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: deltaUp ? 'var(--color-success)' : 'var(--color-error)', display: 'flex', alignItems: 'center', gap: '2px' }}>
+          {deltaUp ? '↑' : '↓'} {delta}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+function AnalyticsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const [assignments, setAssignments] = useState<AssignmentRecord[]>([])
+  const [sessions, setSessions] = useState<StudySessionRecord[]>([])
+  useEffect(() => { Promise.all([fetchAssignments(), listStudySessions()]).then(([a,s]) => { setAssignments(a); setSessions(s) }).catch(() => {}) }, [])
+  const completed = assignments.filter((a) => a.status === 'Completed').length
+  const minutes = sessions.filter((s) => s.status === 'Completed').reduce((n,s) => n + Number(s.actual_minutes || 0), 0)
+  const average = sessions.filter((s) => s.status === 'Completed').length ? Math.round(minutes / sessions.filter((s) => s.status === 'Completed').length) : 0
+  const modules = Array.from(new Set(assignments.map((a) => a.module_name))).map((name) => ({ name, count: assignments.filter((a) => a.module_name === name).length }))
+  const max = Math.max(1, ...modules.map((m) => m.count))
+  return <DashShell activeNav="analytics" onNavChange={(n) => navigateFromDash(n,onNavigate)} onNavigate={onNavigate}><PageHeader title="Analytics" subtitle="Live totals calculated from your saved data" /><main className="flex-1 overflow-y-auto px-8 py-6"><div className="grid grid-cols-4 gap-4 mb-6">{[['Study hours',(minutes/60).toFixed(1)],['Assignments completed',String(completed)],['Average session',`${average} min`],['Completion rate',assignments.length ? `${Math.round(completed/assignments.length*100)}%` : '0%']].map(([l,v]) => <div key={l} className="bg-white p-5 rounded-[var(--radius-lg)]" style={{ border:'1px solid var(--color-border)', boxShadow:'var(--shadow-card)' }}><p style={{fontSize:12,color:'var(--color-text-muted)'}}>{l}</p><p style={{fontSize:28,fontWeight:800,marginTop:8}}>{v}</p></div>)}</div><div className="grid grid-cols-2 gap-6"><div className="bg-white p-5 rounded-[var(--radius-lg)]" style={{border:'1px solid var(--color-border)'}}><h2 style={{fontSize:15,fontWeight:700,marginBottom:18}}>Assignments by module</h2>{modules.length ? modules.map((m) => <div key={m.name} style={{marginBottom:14}}><div className="flex justify-between" style={{fontSize:12}}><span>{m.name}</span><strong>{m.count}</strong></div><div style={{height:8,background:'var(--color-border)',borderRadius:999,marginTop:6}}><div style={{height:'100%',width:`${m.count/max*100}%`,background:'var(--color-primary)',borderRadius:999}} /></div></div>) : <p style={{color:'var(--color-text-muted)'}}>Add assignments to see analytics.</p>}</div><div className="bg-white p-5 rounded-[var(--radius-lg)]" style={{border:'1px solid var(--color-border)'}}><h2 style={{fontSize:15,fontWeight:700,marginBottom:18}}>Recent completed sessions</h2>{sessions.filter((s)=>s.status==='Completed').slice(-6).reverse().map((s)=><div key={s.id} style={{padding:'10px 0',borderBottom:'1px solid var(--color-border)'}}><p style={{fontSize:13,fontWeight:700}}>{s.title}</p><p style={{fontSize:11.5,color:'var(--color-text-muted)'}}>{s.actual_minutes} minutes · {new Date(s.start_at).toLocaleDateString('en-GB')}</p></div>)}</div></div></main></DashShell>
+}
+
+// ─── Settings Page ────────────────────────────────────────────────────────────
+
+type SettingsTab = 'profile' | 'security' | 'notifications' | 'integrations' | 'accessibility' | 'appearance' | 'subscription' | 'account'
+
+const SETTINGS_TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
+  { id: 'profile',        label: 'Profile',           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg> },
+  { id: 'security',       label: 'Password & Security', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg> },
+  { id: 'notifications',  label: 'Notifications',     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg> },
+  { id: 'integrations',   label: 'Calendar & Sync',   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" /></svg> },
+  { id: 'accessibility',  label: 'Accessibility',     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="3" r="1" /><path d="M6 8l6-2 6 2" /><path d="M12 6v7" /><path d="M8 21l4-7 4 7" /></svg> },
+  { id: 'appearance',     label: 'Appearance',        icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg> },
+  { id: 'subscription',   label: 'Subscription',      icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg> },
+  { id: 'account',        label: 'Account',           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg> },
+]
+
+// ── Reusable settings primitives ──────────────────────────────────────────────
+
+function SettingsSection({ title, description, children, last }: { title: string; description?: string; children: React.ReactNode; last?: boolean }) {
+  return (
+    <div style={{ paddingBottom: last ? 0 : '28px', borderBottom: last ? 'none' : '1px solid var(--color-border)', marginBottom: last ? 0 : '28px' }}>
+      <div style={{ marginBottom: '18px' }}>
+        <h3 style={{ fontSize: '14.5px', fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.01em', margin: 0 }}>{title}</h3>
+        {description && <p style={{ fontSize: '12.5px', color: 'var(--color-text-muted)', marginTop: '4px' }}>{description}</p>}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function SettingsRow({ label, description, children, last }: { label: string; description?: string; children: React.ReactNode; last?: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', padding: '12px 0', borderBottom: last ? 'none' : '1px solid var(--color-border)' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.3 }}>{label}</p>
+        {description && <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px', lineHeight: 1.5 }}>{description}</p>}
+      </div>
+      <div style={{ flexShrink: 0 }}>{children}</div>
+    </div>
+  )
+}
+
+function Toggle({ on, onChange, disabled }: { on: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={() => onChange(!on)}
+      style={{
+        width: '44px', height: '24px', borderRadius: '9999px', border: 'none',
+        background: on ? 'var(--color-primary)' : 'var(--color-border-strong)',
+        cursor: disabled ? 'default' : 'pointer',
+        position: 'relative', transition: 'background 0.2s', padding: 0, flexShrink: 0,
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      <span
+        style={{
+          position: 'absolute', top: '3px',
+          left: on ? '23px' : '3px',
+          width: '18px', height: '18px', borderRadius: '50%',
+          background: 'white',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
+          transition: 'left 0.2s cubic-bezier(0.34,1.2,0.64,1)',
+          display: 'block',
+        }}
+      />
+    </button>
+  )
+}
+
+function SettingsInput({ id, label, type = 'text', value, onChange, placeholder, hint, error }: {
+  id: string; label: string; type?: string; value: string; onChange: (v: string) => void
+  placeholder?: string; hint?: string; error?: string
+}) {
+  const [focused, setFocused] = React.useState(false)
+  return (
+    <div>
+      <label htmlFor={id} style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '6px' }}>{label}</label>
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        aria-describedby={error ? `${id}-err` : hint ? `${id}-hint` : undefined}
+        aria-invalid={!!error}
+        style={{
+          width: '100%', height: '40px', padding: '0 12px',
+          borderRadius: 'var(--radius-md)',
+          border: `1.5px solid ${error ? 'var(--color-error)' : focused ? 'var(--color-primary)' : 'var(--color-border)'}`,
+          boxShadow: focused && !error ? 'var(--shadow-focus)' : 'none',
+          background: error ? '#fff8f8' : 'var(--color-background)',
+          color: 'var(--color-text-primary)', fontSize: '13.5px', outline: 'none',
+          boxSizing: 'border-box', transition: 'border-color 0.15s, box-shadow 0.15s',
+        }}
+      />
+      {error && <p id={`${id}-err`} role="alert" style={{ fontSize: '11.5px', color: 'var(--color-error)', marginTop: '5px', display: 'flex', alignItems: 'center', gap: '4px' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{error}</p>}
+      {hint && !error && <p id={`${id}-hint`} style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '5px' }}>{hint}</p>}
+    </div>
+  )
+}
+
+function SettingsSelect({ id, label, value, onChange, options, hint }: {
+  id: string; label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; hint?: string
+}) {
+  return (
+    <div>
+      <label htmlFor={id} style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '6px' }}>{label}</label>
+      <div style={{ position: 'relative' }}>
+        <select
+          id={id}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            width: '100%', height: '40px', padding: '0 36px 0 12px',
+            borderRadius: 'var(--radius-md)', border: '1.5px solid var(--color-border)',
+            background: 'var(--color-background)', color: 'var(--color-text-primary)',
+            fontSize: '13.5px', outline: 'none', appearance: 'none', cursor: 'pointer', boxSizing: 'border-box',
+          }}
+        >
+          {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+      </div>
+      {hint && <p style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '5px' }}>{hint}</p>}
+    </div>
+  )
+}
+
+function SaveButton({ onClick, saving, saved, label = 'Save Changes' }: { onClick: () => void; saving?: boolean; saved?: boolean; label?: string }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={saving || saved}
+      style={{
+        height: '38px', padding: '0 20px', borderRadius: 'var(--radius-md)', border: 'none',
+        background: saved ? 'var(--color-success)' : 'var(--color-primary)',
+        color: 'white', fontSize: '13.5px', fontWeight: 700, cursor: saving || saved ? 'default' : 'pointer',
+        display: 'inline-flex', alignItems: 'center', gap: '8px',
+        transition: 'background 0.2s', opacity: saving ? 0.8 : 1,
+      }}
+      onMouseEnter={(e) => { if (!saving && !saved) e.currentTarget.style.background = 'var(--color-primary-hover)' }}
+      onMouseLeave={(e) => { if (!saving && !saved) e.currentTarget.style.background = 'var(--color-primary)' }}
+    >
+      {saving ? (
+        <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" style={{ animation: 'spin 0.9s linear infinite' }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Saving…</>
+      ) : saved ? (
+        <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>Saved</>
+      ) : label}
+    </button>
+  )
+}
+
+function useSave(): [boolean, boolean, () => void] {
+  const [saving, setSaving] = React.useState(false)
+  const [saved, setSaved] = React.useState(false)
+  const trigger = () => {
+    setSaving(true); setSaved(false)
+    setTimeout(() => { setSaving(false); setSaved(true) }, 1400)
+    setTimeout(() => setSaved(false), 4000)
+  }
+  return [saving, saved, trigger]
+}
+
+function SavedBanner() {
+  return (
+    <div
+      role="status"
+      style={{
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '11px 14px', borderRadius: 'var(--radius-md)',
+        background: 'var(--color-success-light)', border: '1px solid #86efac',
+        marginBottom: '20px',
+      }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-success-foreground)', margin: 0 }}>
+        Changes saved successfully.
+      </p>
+    </div>
+  )
+}
+
+// ── Integration card ──────────────────────────────────────────────────────────
+function IntegrationCard({ logo, name, description, connected, onToggle }: {
+  logo: React.ReactNode; name: string; description: string; connected: boolean; onToggle: () => void
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px',
+      borderRadius: 'var(--radius-md)', border: `1.5px solid ${connected ? 'var(--color-primary)' : 'var(--color-border)'}`,
+      background: connected ? 'var(--color-primary-light)' : 'var(--color-background)',
+      transition: 'all 0.2s',
+    }}>
+      <div style={{ width: '40px', height: '40px', borderRadius: 'var(--radius-sm)', background: 'white', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        {logo}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1.25 }}>{name}</p>
+        <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>{description}</p>
+      </div>
+      {connected ? (
+        <button
+          onClick={onToggle}
+          style={{ height: '32px', padding: '0 12px', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--color-primary)', background: 'white', color: 'var(--color-primary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+        >
+          Disconnect
+        </button>
+      ) : (
+        <button
+          onClick={onToggle}
+          style={{ height: '32px', padding: '0 12px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--color-primary)', color: 'white', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--color-primary-hover)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--color-primary)' }}
+        >
+          Connect
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── Appearance option card ────────────────────────────────────────────────────
+function AppearanceCard({ label, selected, onClick, preview }: { label: string; selected: boolean; onClick: () => void; preview: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flex: 1, padding: '12px', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+        border: selected ? '2px solid var(--color-primary)' : '2px solid var(--color-border)',
+        background: selected ? 'var(--color-primary-light)' : 'var(--color-background)',
+        outline: 'none', transition: 'all 0.15s',
+      }}
+    >
+      {preview}
+      <p style={{ fontSize: '12.5px', fontWeight: 700, color: selected ? 'var(--color-primary)' : 'var(--color-text-secondary)', marginTop: '8px', textAlign: 'center' }}>{label}</p>
+      {selected && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+      )}
+    </button>
+  )
+}
+
+// ── Delete confirmation dialog ────────────────────────────────────────────────
+function DeleteDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
+  const [confirmText, setConfirmText] = React.useState('')
+  const [focused, setFocused] = React.useState(false)
+  const ready = confirmText === 'DELETE'
+  return (
+    <>
+      <div onClick={onCancel} style={{ position: 'fixed', inset: 0, background: 'rgba(26,29,46,0.5)', backdropFilter: 'blur(3px)', zIndex: 50 }} />
+      <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{ background: 'white', borderRadius: 'var(--radius-xl)', padding: '28px', maxWidth: '420px', width: '100%', boxShadow: '0 24px 64px 0 rgba(26,29,46,0.22)' }}
+        >
+          {/* Icon */}
+          <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'var(--color-error-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-error)" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </div>
+          <h3 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--color-text-primary)', textAlign: 'center', letterSpacing: '-0.015em', marginBottom: '10px' }}>Delete your account?</h3>
+          <p style={{ fontSize: '13.5px', color: 'var(--color-text-secondary)', lineHeight: 1.65, textAlign: 'center', marginBottom: '6px' }}>
+            This will permanently delete your profile, all assignments, notes, and study data. <strong style={{ color: 'var(--color-text-primary)' }}>This action cannot be undone.</strong>
+          </p>
+          {/* Confirm input */}
+          <div style={{ marginTop: '18px', marginBottom: '20px' }}>
+            <label htmlFor="del-confirm" style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '6px' }}>
+              Type <code style={{ background: 'var(--color-error-light)', color: 'var(--color-error)', padding: '1px 5px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '12px' }}>DELETE</code> to confirm
+            </label>
+            <input
+              id="del-confirm"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="DELETE"
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              style={{
+                width: '100%', height: '40px', padding: '0 12px', boxSizing: 'border-box',
+                borderRadius: 'var(--radius-md)',
+                border: `1.5px solid ${focused ? 'var(--color-error)' : 'var(--color-border)'}`,
+                boxShadow: focused ? '0 0 0 3px rgba(220,38,38,0.14)' : 'none',
+                background: 'var(--color-background)', color: 'var(--color-text-primary)',
+                fontSize: '13.5px', outline: 'none', fontFamily: 'monospace',
+                transition: 'border-color 0.15s, box-shadow 0.15s',
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={onCancel}
+              style={{ flex: 1, height: '40px', borderRadius: 'var(--radius-md)', background: 'var(--color-background)', border: '1.5px solid var(--color-border)', color: 'var(--color-text-secondary)', fontSize: '13.5px', fontWeight: 600, cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={ready ? onConfirm : undefined}
+              disabled={!ready}
+              style={{
+                flex: 1, height: '40px', borderRadius: 'var(--radius-md)', border: 'none',
+                background: ready ? 'var(--color-error)' : 'var(--color-border)',
+                color: ready ? 'white' : 'var(--color-text-muted)',
+                fontSize: '13.5px', fontWeight: 700, cursor: ready ? 'pointer' : 'default',
+                transition: 'background 0.15s, color 0.15s',
+              }}
+            >
+              Delete Account
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Password strength meter ───────────────────────────────────────────────────
+function pwStrength(pw: string): { score: number; label: string; color: string } {
+  if (!pw) return { score: 0, label: '', color: 'transparent' }
+  let s = 0
+  if (pw.length >= 8) s++
+  if (/[A-Z]/.test(pw)) s++
+  if (/[0-9]/.test(pw)) s++
+  if (/[^A-Za-z0-9]/.test(pw)) s++
+  const map = [
+    { score: 0, label: '', color: 'transparent' },
+    { score: 1, label: 'Weak', color: 'var(--color-error)' },
+    { score: 2, label: 'Fair', color: 'var(--color-warning)' },
+    { score: 3, label: 'Good', color: '#0891b2' },
+    { score: 4, label: 'Strong', color: 'var(--color-success)' },
+  ]
+  return map[s]
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+function SettingsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const initial = getAuth()?.record
+  const [name, setName] = useState(initial?.name || '')
+  const [course, setCourse] = useState(initial?.course || '')
+  const [year, setYear] = useState(initial?.year_of_study || '')
+  const [theme, setTheme] = useState<'light'|'dark'|'system'>((initial?.theme as any) || 'light')
+  const [deadline, setDeadline] = useState(Boolean(initial?.deadline_reminders ?? true))
+  const [weekly, setWeekly] = useState(Boolean(initial?.weekly_report ?? true))
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const save = async () => { try { setSaving(true); setError(''); await updateCurrentUser({ name, course, year_of_study: year, theme, deadline_reminders: deadline, weekly_report: weekly }); setMessage('Settings saved.') } catch(e){setError(readableApiError(e))} finally{setSaving(false)} }
+  const remove = async () => { if (!window.confirm('Permanently delete your account and all of its data?')) return; try { await deleteCurrentUser(); onNavigate('landing') } catch(e){setError(readableApiError(e))} }
+  return <DashShell activeNav="settings" onNavChange={(n)=>navigateFromDash(n,onNavigate)} onNavigate={onNavigate}><PageHeader title="Settings" subtitle={initial?.email || ''} /><main className="flex-1 overflow-y-auto px-8 py-6"><div style={{maxWidth:720}}>{error&&<p style={{padding:12,background:'var(--color-error-light)',color:'var(--color-error)',borderRadius:8,marginBottom:16}}>{error}</p>}{message&&<p style={{padding:12,background:'var(--color-success-light)',color:'var(--color-success-foreground)',borderRadius:8,marginBottom:16}}>{message}</p>}<div className="bg-white rounded-[var(--radius-lg)] p-6 mb-5" style={{border:'1px solid var(--color-border)'}}><h2 style={{fontSize:15,fontWeight:700,marginBottom:18}}>Profile</h2><div className="grid grid-cols-2 gap-4"><Field id="settings-name" label="Full name" value={name} onChange={setName}/><Field id="settings-course" label="Course" value={course} onChange={setCourse}/><SelectField id="settings-year" label="Year" value={year} onChange={setYear} placeholder="Select" options={['1','2','3','4','Postgraduate','Other']}/><SelectField id="settings-theme" label="Theme" value={theme} onChange={(v)=>setTheme(v as any)} placeholder="Select" options={['light','dark','system']}/></div></div><div className="bg-white rounded-[var(--radius-lg)] p-6 mb-5" style={{border:'1px solid var(--color-border)'}}><h2 style={{fontSize:15,fontWeight:700,marginBottom:18}}>Notifications</h2><label className="flex items-center justify-between py-3"><span><strong style={{fontSize:13}}>Deadline reminders</strong><p style={{fontSize:12,color:'var(--color-text-muted)'}}>Store your preference for deadline emails.</p></span><input type="checkbox" checked={deadline} onChange={(e)=>setDeadline(e.target.checked)}/></label><label className="flex items-center justify-between py-3"><span><strong style={{fontSize:13}}>Weekly report</strong><p style={{fontSize:12,color:'var(--color-text-muted)'}}>Receive a weekly progress summary after SMTP is configured.</p></span><input type="checkbox" checked={weekly} onChange={(e)=>setWeekly(e.target.checked)}/></label></div><div className="flex gap-3"><Button onClick={save} disabled={saving}>{saving?'Saving…':'Save Changes'}</Button><Button variant="outline" onClick={()=>{logout();onNavigate('landing')}}>Log Out</Button><Button variant="danger" onClick={remove}>Delete Account</Button></div></div></main></DashShell>
+}
+
+function PlannerPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const [sessions,setSessions]=useState<StudySessionRecord[]>([])
+  const [title,setTitle]=useState('')
+  const [start,setStart]=useState('')
+  const [minutes,setMinutes]=useState('60')
+  const [error,setError]=useState('')
+  const load=()=>listStudySessions().then(setSessions).catch((e)=>setError(readableApiError(e)))
+  useEffect(()=>{void load()},[])
+  const add=async()=>{if(!title||!start)return setError('Enter a title and start date/time.');try{await createStudySession({title,startAt:start,plannedMinutes:Number(minutes)||60});setTitle('');setStart('');await load()}catch(e){setError(readableApiError(e))}}
+  return <DashShell activeNav="planner" onNavChange={(n)=>navigateFromDash(n,onNavigate)} onNavigate={onNavigate}><PageHeader title="Study Planner" subtitle="Create and manage planned study sessions" /><main className="flex-1 overflow-y-auto px-8 py-6"><div className="grid grid-cols-[360px_1fr] gap-6"><div className="bg-white p-5 rounded-[var(--radius-lg)]" style={{border:'1px solid var(--color-border)'}}><h2 style={{fontSize:15,fontWeight:700,marginBottom:16}}>Plan a session</h2><div className="flex flex-col gap-4"><Field id="session-title" label="Session title" value={title} onChange={setTitle}/><div><label style={{fontSize:13,fontWeight:600}}>Start date and time</label><input type="datetime-local" value={start} onChange={(e)=>setStart(e.target.value)} style={{width:'100%',height:44,border:'1.5px solid var(--color-border)',borderRadius:8,padding:'0 10px',marginTop:6}}/></div><Field id="session-minutes" label="Planned minutes" type="number" value={minutes} onChange={setMinutes}/>{error&&<p style={{color:'var(--color-error)',fontSize:12}}>{error}</p>}<Button onClick={add}>Add Session</Button></div></div><div className="bg-white rounded-[var(--radius-lg)] overflow-hidden" style={{border:'1px solid var(--color-border)'}}>{sessions.length===0?<p style={{padding:24,color:'var(--color-text-muted)'}}>No sessions planned.</p>:sessions.map((s)=><div key={s.id} className="flex items-center gap-4 p-4" style={{borderBottom:'1px solid var(--color-border)'}}><div style={{flex:1}}><p style={{fontSize:13.5,fontWeight:700}}>{s.title}</p><p style={{fontSize:11.5,color:'var(--color-text-muted)'}}>{new Date(s.start_at).toLocaleString('en-GB')} · {s.planned_minutes} min</p></div><StatusLabel variant={s.status==='Completed'?'success':s.status==='Cancelled'?'error':'primary'}>{s.status}</StatusLabel>{s.status==='Planned'&&<Button variant="ghost" size="sm" onClick={async()=>{await updateStudySession(s.id,{status:'Cancelled'} as Partial<StudySessionRecord>);await load()}}>Cancel</Button>}</div>)}</div></div></main></DashShell>
+}
+
+function TimerPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const [seconds,setSeconds]=useState(25*60)
+  const [running,setRunning]=useState(false)
+  const [title,setTitle]=useState('Focus session')
+  const [message,setMessage]=useState('')
+  useEffect(()=>{if(!running)return;const id=window.setInterval(()=>setSeconds((s)=>{if(s<=1){window.clearInterval(id);setRunning(false);return 0}return s-1}),1000);return()=>window.clearInterval(id)},[running])
+  const finish=async()=>{const elapsed=Math.max(1,Math.round((25*60-seconds)/60));try{const start=new Date(Date.now()-elapsed*60000).toISOString();const created=await createStudySession({title,startAt:start,plannedMinutes:25});await updateStudySession(created.id,{status:'Completed',actual_minutes:elapsed} as Partial<StudySessionRecord>);setMessage(`Saved a ${elapsed}-minute focus session.`);setRunning(false)}catch(e){setMessage(readableApiError(e))}}
+  const mm=String(Math.floor(seconds/60)).padStart(2,'0'), ss=String(seconds%60).padStart(2,'0')
+  return <DashShell activeNav="timer" onNavChange={(n)=>navigateFromDash(n,onNavigate)} onNavigate={onNavigate}><PageHeader title="Focus Timer" subtitle="Completed sessions are saved to your analytics" /><main className="flex-1 overflow-y-auto px-8 py-10 flex justify-center"><div className="bg-white rounded-[var(--radius-xl)] p-10 text-center" style={{width:520,border:'1px solid var(--color-border)',boxShadow:'var(--shadow-card)'}}><Field id="timer-title" label="Session name" value={title} onChange={setTitle}/><div style={{fontSize:72,fontWeight:800,letterSpacing:'-0.05em',margin:'40px 0 28px',color:'var(--color-primary)'}}>{mm}:{ss}</div><div className="flex justify-center gap-3"><Button onClick={()=>setRunning((v)=>!v)}>{running?'Pause':'Start'}</Button><Button variant="outline" onClick={()=>{setRunning(false);setSeconds(25*60)}}>Reset</Button><Button variant="secondary" onClick={finish}>Finish & Save</Button></div>{message&&<p style={{marginTop:20,fontSize:13,color:'var(--color-text-secondary)'}}>{message}</p>}</div></main></DashShell>
+}
+
+function CalendarPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const [assignments,setAssignments]=useState<AssignmentRecord[]>([]),[sessions,setSessions]=useState<StudySessionRecord[]>([])
+  useEffect(()=>{Promise.all([fetchAssignments(),listStudySessions()]).then(([a,s])=>{setAssignments(a);setSessions(s)}).catch(()=>{})},[])
+  const events=[...assignments.map((a)=>({id:`a-${a.id}`,date:new Date(a.due_at),title:a.title,type:'Assignment',status:a.status})),...sessions.map((s)=>({id:`s-${s.id}`,date:new Date(s.start_at),title:s.title,type:'Study session',status:s.status}))].sort((a,b)=>a.date.getTime()-b.date.getTime())
+  return <DashShell activeNav="calendar" onNavChange={(n)=>navigateFromDash(n,onNavigate)} onNavigate={onNavigate}><PageHeader title="Calendar" subtitle="Deadlines and study sessions in chronological order" /><main className="flex-1 overflow-y-auto px-8 py-6"><div className="bg-white rounded-[var(--radius-lg)] overflow-hidden" style={{border:'1px solid var(--color-border)'}}>{events.length===0?<p style={{padding:24,color:'var(--color-text-muted)'}}>No calendar items yet.</p>:events.map((e)=><div key={e.id} className="grid grid-cols-[160px_1fr_140px] gap-4 p-4 items-center" style={{borderBottom:'1px solid var(--color-border)'}}><strong style={{fontSize:13}}>{e.date.toLocaleString('en-GB')}</strong><span style={{fontSize:13.5}}>{e.title}</span><StatusLabel variant={e.type==='Assignment'?'primary':'info'}>{e.type}</StatusLabel></div>)}</div></main></DashShell>
+}
+
+// ─── App Root ─────────────────────────────────────────────────────────────────
+export default function App() {
+  const routeToPage = (): Page => {
+    const path = window.location.pathname.replace(/\/+$/, '') || '/'
+    if (path === '/login') return 'login'
+    if (path === '/register') return 'register'
+    if (path === '/reset-password') return 'reset-password'
+    if (path === '/dashboard') return 'dashboard'
+    if (path === '/assignments') return 'assignments-page'
+    if (path.startsWith('/assignments/')) {
+      const id = path.split('/').filter(Boolean)[1]
+      if (id) localStorage.setItem('studyflow_selected_assignment', id)
+      return 'assignment-detail'
+    }
+    if (path === '/planner') return 'planner'
+    if (path === '/timer') return 'timer'
+    if (path === '/analytics') return 'analytics'
+    if (path === '/calendar') return 'calendar'
+    if (path === '/settings') return 'settings'
+    return 'landing'
+  }
+
+  const [page, setPage] = useState<Page>(routeToPage)
+  const [checkingAuth, setCheckingAuth] = useState(true)
+  const protectedPages: Page[] = ['dashboard','assignments-page','assignment-detail','planner','timer','analytics','calendar','settings']
+
+  const routeForPage = (next: Page): string => {
+    const selected = localStorage.getItem('studyflow_selected_assignment')
+    const routes: Record<Page, string> = {
+      landing: '/', login: '/login', register: '/register', 'reset-password': `/reset-password${window.location.search || ''}`, dashboard: '/dashboard',
+      'assignments-page': '/assignments', 'assignment-detail': selected ? `/assignments/${selected}` : '/assignments',
+      planner: '/planner', timer: '/timer', analytics: '/analytics', calendar: '/calendar', settings: '/settings',
+    }
+    return routes[next]
+  }
+
+  const navigate = (next: Page, replace = false) => {
+    if (protectedPages.includes(next) && !isLoggedIn()) next = 'login'
+    const target = routeForPage(next)
+    if (replace) window.history.replaceState({}, '', target)
+    else if (window.location.pathname !== target) window.history.pushState({}, '', target)
+    setPage(next)
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+  }
+
+  useEffect(() => {
+    const onPop = () => {
+      const next = routeToPage()
+      setPage(protectedPages.includes(next) && !isLoggedIn() ? 'login' : next)
+    }
+    window.addEventListener('popstate', onPop)
+    void refreshAuth().finally(() => {
+      const next = routeToPage()
+      if (protectedPages.includes(next) && !isLoggedIn()) navigate('login', true)
+      else if ((next === 'login' || next === 'register') && isLoggedIn()) navigate('dashboard', true)
+      else setPage(next)
+      setCheckingAuth(false)
+    })
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  if (checkingAuth) return <div className="min-h-screen flex items-center justify-center" style={{ fontFamily: 'var(--font-sans)', background: 'var(--color-background)', color: 'var(--color-primary)', fontWeight: 700 }}>Loading StudyFlow…</div>
+
+  if (page === 'login') return <LoginPage onNavigate={navigate} />
+  if (page === 'register') return <RegisterPage onNavigate={navigate} />
+  if (page === 'reset-password') return <ResetPasswordPage onNavigate={navigate} />
+  if (page === 'dashboard') return <DashboardPage onNavigate={navigate} />
+  if (page === 'assignments-page') return <AssignmentsPage onNavigate={navigate} />
+  if (page === 'assignment-detail') return <AssignmentDetailPage onNavigate={navigate} />
+  if (page === 'planner') return <PlannerPage onNavigate={navigate} />
+  if (page === 'timer') return <TimerPage onNavigate={navigate} />
+  if (page === 'analytics') return <AnalyticsPage onNavigate={navigate} />
+  if (page === 'calendar') return <CalendarPage onNavigate={navigate} />
+  if (page === 'settings') return <SettingsPage onNavigate={navigate} />
+
+  return (
+    <div className="sf-landing" style={{ fontFamily: 'var(--font-sans)', background: 'var(--color-background)', minHeight: '100vh' }}>
+      <LandingNav onNavigate={navigate} />
+      <div id="hero"><HeroSection onNavigate={navigate} /></div>
+      <ProblemSection />
+      <div id="features"><FeaturesSection /></div>
+      <div id="how-it-works"><HowItWorksSection /></div>
+      <DashboardShowcaseSection />
+      <TestimonialsSection />
+      <div id="pricing"><PricingSection onNavigate={navigate} /></div>
+      <div id="faq"><FAQSection /></div>
+      <CTASection onNavigate={navigate} />
+      <Footer />
+    </div>
+  )
+}
