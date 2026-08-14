@@ -117,6 +117,10 @@ body {
   color: var(--color-primary);
 }
 
+.sf-preview-mobile {
+  display: none;
+}
+
 /* ── Mobile landing page — responsive overrides (≤ 640 px) ────────────────── */
 @media (max-width: 640px) {
 
@@ -241,9 +245,23 @@ body {
   .sf-landing .sf-hero-preview > .absolute {
     display: none !important;
   }
-  /* Scale the browser chrome mock to fill mobile width */
-  .sf-landing .sf-hero-preview > *:not(.absolute) {
-    transform-origin: top left !important;
+
+  .sf-landing .sf-preview-desktop,
+  .sf-landing .sf-showcase-annotation {
+    display: none !important;
+  }
+
+  .sf-landing .sf-preview-mobile {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .sf-landing .sf-mobile-dashboard-preview {
+    width: 100% !important;
+  }
+
+  .sf-landing .sf-mobile-dashboard-preview .grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
   /* ── How It Works ────────────────────────────────────────────────────── */
@@ -266,16 +284,6 @@ body {
     padding: 0 !important;
   }
   /* Hide annotation labels on mobile */
-  .sf-showcase-wrap > *:not(:last-child) {
-    display: none !important;
-  }
-
-  /* Scale the large showcase screenshot to fit */
-  .sf-showcase-wrap > *:last-child {
-    overflow: hidden !important;
-    border-radius: var(--radius-lg) !important;
-  }
-
   /* ── Touch targets ───────────────────────────────────────────────────── */
 
   /* All interactive elements: minimum 44 px tap target */
@@ -284,18 +292,28 @@ body {
     min-height: 44px;
   }
 
-  /* Pricing cards — full width, slightly reduce inner padding */
-  .sf-landing .grid-cols-3 > div[class*="rounded"] {
-    width: 100% !important;
-  }
-
   /* ── Footer ──────────────────────────────────────────────────────────── */
 
   /* Footer bottom row */
-  .sf-landing footer .flex.items-center.justify-between {
+  .sf-landing .sf-footer-inner {
     flex-direction: column !important;
     gap: 16px !important;
     text-align: center !important;
+  }
+
+  .sf-landing .sf-footer-brand,
+  .sf-landing .sf-footer-brand-title {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .sf-landing .sf-footer-brand {
+    flex-direction: column !important;
+  }
+
+  .sf-landing .sf-footer-tagline {
+    max-width: 300px;
   }
 
   /* Footer brand column spacing */
@@ -358,6 +376,42 @@ body {
     display: none !important;
   }
 
+  .sf-page-header {
+    min-height: auto !important;
+    padding: 16px !important;
+  }
+
+  .sf-page-header-has-action {
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+  }
+
+  .sf-page-header-has-action .sf-page-header-copy,
+  .sf-page-header-has-action .sf-page-header-actions {
+    width: 100% !important;
+  }
+
+  .sf-page-header-has-action .sf-page-header-actions {
+    flex-wrap: nowrap !important;
+  }
+
+  .sf-page-header-has-action .sf-page-header-actions > :last-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .sf-page-header-has-action .sf-page-header-actions > div:last-child {
+    display: flex;
+  }
+
+  .sf-page-header-has-action .sf-page-header-actions > div:last-child > button,
+  .sf-page-header-has-action .sf-page-header-actions > button:last-child {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
   /* ── Dashboard main content ────────────────────────────────────────────────── */
 
   /* Reduce main content padding */
@@ -368,6 +422,109 @@ body {
     padding-right: 1rem !important;
     padding-top: 1.25rem !important;
     padding-bottom: 80px !important;
+  }
+
+  .sf-dashboard-main,
+  .sf-assignments-main,
+  .sf-analytics-main {
+    padding: 20px 16px 88px !important;
+  }
+
+  .sf-dashboard-stats,
+  .sf-analytics-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .sf-dashboard-stat-card,
+  .sf-analytics-stat-card {
+    min-width: 0;
+    min-height: 112px;
+    padding: 14px !important;
+  }
+
+  .sf-dashboard-stat-label,
+  .sf-analytics-stat-label {
+    min-height: 34px;
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .sf-dashboard-stat-value,
+  .sf-analytics-stat-value {
+    font-size: 24px !important;
+    line-height: 1.1 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .sf-dashboard-columns,
+  .sf-analytics-sections {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 14px !important;
+  }
+
+  .sf-dashboard-deadline-row {
+    gap: 10px !important;
+    padding: 14px !important;
+  }
+
+  .sf-dashboard-deadline-status {
+    flex-shrink: 0;
+  }
+
+  .sf-dashboard-sessions {
+    padding: 16px !important;
+  }
+
+  .sf-assignments-toolbar {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .sf-assignments-search {
+    grid-column: 1 / -1;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .sf-assignments-filter {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .sf-assignment-view-toggle {
+    grid-column: 1 / -1;
+    margin-left: 0 !important;
+  }
+
+  .sf-assignment-view-toggle > button {
+    flex: 1;
+  }
+
+  .sf-assignment-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 14px !important;
+  }
+
+  .sf-assignment-card,
+  .sf-assignment-list {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .sf-assignment-card-body {
+    padding: 16px !important;
+  }
+
+  .sf-assignment-card-badges {
+    flex-wrap: wrap;
+  }
+
+  .sf-assignment-card-footer {
+    padding-top: 12px !important;
   }
 
   /* Stats grid: 2 columns on mobile */

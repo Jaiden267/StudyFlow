@@ -4,13 +4,16 @@ import {
   addTask,
   confirmPasswordReset,
   createAssignment as createAssignmentRecord,
+  createModule as createModuleRecord,
   createStudySession,
   deleteAssignment as deleteAssignmentRecord,
   deleteCurrentUser,
+  deleteModule as deleteModuleRecord,
   getAssignment as fetchAssignment,
   getAuth,
   isLoggedIn,
   listAssignments as fetchAssignments,
+  listModules as fetchModules,
   listStudySessions,
   listTasks,
   login,
@@ -21,10 +24,12 @@ import {
   requestPasswordReset,
   updateAssignment as updateAssignmentRecord,
   updateCurrentUser,
+  updateModule as updateModuleRecord,
   updateStudySession,
   updateTask,
   type AssignmentRecord,
   type AssignmentTaskRecord,
+  type ModuleRecord,
   type StudySessionRecord,
 } from './api'
 
@@ -166,7 +171,6 @@ function LandingNav({ onNavigate }: { onNavigate: (p: Page) => void }) {
     { label: 'Home', href: '#hero' },
     { label: 'Features', href: '#features' },
     { label: 'How It Works', href: '#how-it-works' },
-    { label: 'Pricing', href: '#pricing' },
     { label: 'FAQ', href: '#faq' },
   ]
 
@@ -321,7 +325,7 @@ function LandingNav({ onNavigate }: { onNavigate: (p: Page) => void }) {
                   fontSize: '1rem', fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.01em',
                 }}
               >
-                Start for Free
+                Create Account
               </button>
               <button
                 onClick={() => { setMenuOpen(false); onNavigate('login') }}
@@ -559,6 +563,78 @@ function DashboardPreview() {
   )
 }
 
+function MobileDashboardPreview() {
+  const stats = [
+    ['Active assignments', '4'],
+    ['Due this week', '2'],
+    ['Hours studied', '12.5'],
+    ['Completion rate', '87%'],
+  ]
+  const deadlines = [
+    ['Sprint 3 Report', 'COMP3900', 'Tomorrow', '#7c3aed'],
+    ['Problem Set 8', 'MATH2501', 'In 3 days', '#3730a3'],
+    ['Research Reflection', 'PSYC1001', 'In 5 days', '#16a34a'],
+  ]
+
+  return (
+    <div className="sf-mobile-dashboard-preview" style={{ maxWidth: 390, margin: '0 auto', overflow: 'hidden', borderRadius: 22, border: '1px solid var(--color-border)', background: '#f5f6fa', boxShadow: '0 24px 56px rgba(55,48,163,0.16)' }}>
+      <div className="flex items-center justify-between" style={{ padding: '14px 16px', background: 'white', borderBottom: '1px solid var(--color-border)' }}>
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center justify-center" style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg, #3730a3, #7c3aed)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="white" /><path d="M2 17l10 5 10-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" /></svg>
+          </div>
+          <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--color-text-primary)' }}>StudyFlow</span>
+        </div>
+        <span className="flex items-center justify-center" style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--color-primary-light)', color: 'var(--color-primary)', fontSize: 10, fontWeight: 800 }}>JL</span>
+      </div>
+
+      <div style={{ padding: 16 }}>
+        <div className="flex items-end justify-between gap-3" style={{ marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 10.5, color: 'var(--color-text-muted)', marginBottom: 2 }}>Wednesday, 22 October</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-text-primary)', letterSpacing: '-0.02em' }}>Good morning, Jamie</div>
+          </div>
+          <span style={{ padding: '7px 10px', borderRadius: 8, background: 'var(--color-primary)', color: 'white', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }}>+ Add</span>
+        </div>
+
+        <div className="grid grid-cols-2" style={{ gap: 9, marginBottom: 12 }}>
+          {stats.map(([label, value]) => (
+            <div key={label} style={{ minWidth: 0, padding: 12, borderRadius: 12, background: 'white', border: '1px solid var(--color-border)' }}>
+              <div style={{ minHeight: 30, fontSize: 10, lineHeight: 1.45, color: 'var(--color-text-muted)' }}>{label}</div>
+              <div style={{ marginTop: 4, fontSize: 22, lineHeight: 1, fontWeight: 800, color: 'var(--color-text-primary)' }}>{value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ padding: 14, borderRadius: 14, background: 'white', border: '1px solid var(--color-border)' }}>
+          <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-text-primary)' }}>Upcoming deadlines</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-primary)' }}>View all</span>
+          </div>
+          <div style={{ display: 'grid', gap: 9 }}>
+            {deadlines.map(([title, code, due, color]) => (
+              <div key={title} className="flex items-center gap-2.5">
+                <span style={{ width: 4, height: 32, borderRadius: 99, flexShrink: 0, background: color }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+                  <div style={{ marginTop: 1, fontSize: 9.5, color: 'var(--color-text-muted)' }}>{code}</div>
+                </div>
+                <span style={{ fontSize: 9.5, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>{due}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4" style={{ padding: '10px 12px 12px', background: 'white', borderTop: '1px solid var(--color-border)' }}>
+        {['Overview', 'Assignments', 'Planner', 'Analytics'].map((label, index) => (
+          <div key={label} style={{ textAlign: 'center', fontSize: 8.5, fontWeight: index === 0 ? 800 : 600, color: index === 0 ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>{label}</div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Hero Section ─────────────────────────────────────────────────────────────
 function HeroSection({ onNavigate }: { onNavigate: (p: Page) => void }) {
   return (
@@ -670,24 +746,15 @@ function HeroSection({ onNavigate }: { onNavigate: (p: Page) => void }) {
                 style={{ paddingLeft: '1.75rem', paddingRight: '1.75rem' }}
                 onClick={() => onNavigate('register')}
               >
-                Start for Free
-              </Button>
-              <Button
-                variant="ghost"
-                size="lg"
-                icon={<Icon size={15}>{Icons.play}</Icon>}
-                iconPosition="left"
-                style={{ color: 'var(--color-text-primary)' }}
-              >
-                View Demo
+                Create Account
               </Button>
             </div>
 
             {/* Trust indicators */}
             <div className="sf-hero-badges flex items-center gap-5 flex-wrap">
               {[
-                { icon: Icons.check, text: 'No credit card required' },
-                { icon: Icons.sparkle, text: 'Free student plan' },
+                { icon: Icons.check, text: 'All features included' },
+                { icon: Icons.sparkle, text: 'Built for students' },
                 { icon: Icons.zap, text: 'Set up in minutes' },
               ].map((t) => (
                 <div key={t.text} className="flex items-center gap-2">
@@ -761,7 +828,8 @@ function HeroSection({ onNavigate }: { onNavigate: (p: Page) => void }) {
               </div>
             </div>
 
-            <DashboardPreview />
+            <div className="sf-preview-desktop"><DashboardPreview /></div>
+            <div className="sf-preview-mobile"><MobileDashboardPreview /></div>
           </div>
 
         </div>
@@ -1375,7 +1443,7 @@ function DashboardShowcaseSection() {
     const isHoriz = dir === 'right' || dir === 'left'
     return (
       <div
-        className="absolute pointer-events-none"
+        className="sf-showcase-annotation absolute pointer-events-none"
         style={{ zIndex: 20, ...style }}
       >
         <div
@@ -1475,7 +1543,7 @@ function DashboardShowcaseSection() {
 
           {/* Browser shell */}
           <div
-            className="rounded-[var(--radius-xl)] overflow-hidden"
+            className="sf-preview-desktop rounded-[var(--radius-xl)] overflow-hidden"
             style={{
               border: '1px solid var(--color-border)',
               boxShadow: '0 40px 100px rgba(55,48,163,0.15), 0 8px 32px rgba(55,48,163,0.08)',
@@ -1738,6 +1806,7 @@ function DashboardShowcaseSection() {
               </div>
             </div>
           </div>
+          <div className="sf-preview-mobile"><MobileDashboardPreview /></div>
         </div>
       </div>
     </section>
@@ -1849,173 +1918,6 @@ function TestimonialsSection() {
   )
 }
 
-// ─── Pricing ──────────────────────────────────────────────────────────────────
-function PricingSection({ onNavigate }: { onNavigate: (p: Page) => void }) {
-  const plans = [
-    {
-      name: 'Free',
-      price: null,
-      priceNote: 'Always free',
-      description: 'Everything you need to get started and build better study habits.',
-      popular: false,
-      cta: 'Start for Free',
-      ctaVariant: 'outline' as const,
-      features: [
-        'Up to 10 active assignments',
-        'Basic weekly planner',
-        'Focus timer',
-        'Deadline reminders',
-      ],
-    },
-    {
-      name: 'Student Pro',
-      price: '£3.99',
-      priceNote: 'per month',
-      description: 'For students who want full control over every module and deadline.',
-      popular: true,
-      cta: 'Start Free Trial',
-      ctaVariant: 'primary' as const,
-      features: [
-        'Unlimited assignments',
-        'Advanced study planning',
-        'Progress analytics',
-        'Calendar integrations',
-        'Priority reminders',
-      ],
-    },
-    {
-      name: 'Study Group',
-      price: '£8.99',
-      priceNote: 'per month',
-      description: 'Plan, track, and stay accountable together with your study group.',
-      popular: false,
-      cta: 'Create a Group',
-      ctaVariant: 'outline' as const,
-      features: [
-        'Shared study plans',
-        'Group accountability',
-        'Collaborative goals',
-        'Group progress dashboard',
-      ],
-    },
-  ]
-
-  return (
-    <section
-      style={{
-        background: 'white',
-        borderTop: '1px solid var(--color-border)',
-        padding: '96px 0 104px',
-      }}
-    >
-      <div className="max-w-[1280px] mx-auto px-8">
-        {/* Heading */}
-        <div className="text-center max-w-xl mx-auto mb-16">
-          <p style={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-primary)', marginBottom: '12px' }}>
-            Pricing
-          </p>
-          <h2 style={{ fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.025em', lineHeight: 1.2, color: 'var(--color-text-primary)', marginBottom: '16px' }}>
-            Simple, student-friendly pricing
-          </h2>
-          <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>
-            Start for free and upgrade whenever you need more. No hidden fees, no complicated plans — just straightforward value.
-          </p>
-        </div>
-
-        {/* Cards */}
-        <div className="grid grid-cols-3 gap-6 items-start">
-          {plans.map((plan) => (
-            <div
-              key={plan.name}
-              className="flex flex-col rounded-[var(--radius-lg)] overflow-hidden relative"
-              style={{
-                border: plan.popular ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                background: plan.popular ? 'white' : 'var(--color-background)',
-                boxShadow: plan.popular ? 'var(--shadow-card-hover)' : 'var(--shadow-card)',
-              }}
-            >
-              {/* Popular badge */}
-              {plan.popular && (
-                <div
-                  className="absolute top-0 right-6 px-3 py-1 rounded-b-[6px] text-white"
-                  style={{ background: 'var(--color-primary)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em' }}
-                >
-                  Most Popular
-                </div>
-              )}
-
-              <div className="p-8 flex flex-col gap-6 flex-1">
-                {/* Plan name + description */}
-                <div>
-                  <h3 style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '6px', letterSpacing: '-0.01em' }}>
-                    {plan.name}
-                  </h3>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-                    {plan.description}
-                  </p>
-                </div>
-
-                {/* Price */}
-                <div className="flex items-end gap-1.5 pb-6" style={{ borderBottom: '1px solid var(--color-border)' }}>
-                  {plan.price ? (
-                    <>
-                      <span style={{ fontSize: '2.25rem', fontWeight: 800, color: 'var(--color-text-primary)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                        {plan.price}
-                      </span>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: '3px' }}>
-                        {plan.priceNote}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ fontSize: '2.25rem', fontWeight: 800, color: 'var(--color-text-primary)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                        Free
-                      </span>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: '3px' }}>
-                        {plan.priceNote}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {/* Features */}
-                <ul className="flex flex-col gap-3 flex-1">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5">
-                      <span
-                        className="w-4.5 h-4.5 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                        style={{ background: 'var(--color-success-light)', color: 'var(--color-success)', width: '18px', height: '18px' }}
-                      >
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      </span>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* CTA */}
-                <button
-                  className="w-full h-11 rounded-[var(--radius-md)] font-medium text-sm transition-all duration-150 cursor-pointer"
-                  style={
-                    plan.ctaVariant === 'primary'
-                      ? { background: 'var(--color-primary)', color: 'white', border: 'none' }
-                      : { background: 'white', color: 'var(--color-primary)', border: '1.5px solid var(--color-primary)' }
-                  }
-                  onClick={() => onNavigate('register')}
-                >
-                  {plan.cta}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
 // ─── FAQ ──────────────────────────────────────────────────────────────────────
 function FAQSection() {
   const [open, setOpen] = useState<number | null>(null)
@@ -2023,7 +1925,7 @@ function FAQSection() {
   const faqs = [
     {
       q: 'Is StudyFlow free?',
-      a: 'Yes — StudyFlow has a free plan that includes up to 10 active assignments, a basic weekly planner, a focus timer, and deadline reminders. You can upgrade to Student Pro or Study Group at any time for more advanced features.',
+      a: 'Yes. StudyFlow is a free service, and all currently available features are included for every account.',
     },
     {
       q: 'Can I use StudyFlow on mobile?',
@@ -2031,15 +1933,15 @@ function FAQSection() {
     },
     {
       q: 'Can I connect my university calendar?',
-      a: "Calendar integration is available on the Student Pro and Study Group plans. StudyFlow supports import from Google Calendar, Microsoft Outlook, and standard iCal feeds — so your timetable and StudyFlow stay in sync automatically.",
+      a: "StudyFlow's built-in calendar displays your saved assignments and study sessions. External Google Calendar and Outlook synchronisation are not currently available.",
     },
     {
       q: 'Does StudyFlow complete assignments for students?',
       a: "No — StudyFlow is an organisation and planning tool. It helps you manage deadlines, schedule study time, and track progress. The work itself is always yours.",
     },
     {
-      q: 'Can I cancel my plan at any time?',
-      a: "Absolutely. There are no long-term contracts. You can cancel your Student Pro or Study Group subscription at any time from your account settings, and you'll retain access until the end of your current billing period.",
+      q: 'Who can use StudyFlow?',
+      a: 'StudyFlow is designed for university students who want one place to organise assignments, deadlines, modules and focused study sessions.',
     },
   ]
 
@@ -2141,7 +2043,7 @@ function CTASection({ onNavigate }: { onNavigate: (p: Page) => void }) {
         >
           <span className="w-1.5 h-1.5 rounded-full bg-[#34d399]" />
           <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.01em' }}>
-            Free to get started — no card required
+            Free for every student
           </span>
         </div>
 
@@ -2177,13 +2079,7 @@ function CTASection({ onNavigate }: { onNavigate: (p: Page) => void }) {
             style={{ background: 'white', color: 'var(--color-primary)', border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}
             onClick={() => onNavigate('register')}
           >
-            Get Started for Free
-          </button>
-          <button
-            className="h-12 px-8 rounded-[var(--radius-lg)] font-semibold text-base transition-all duration-150 cursor-pointer"
-            style={{ background: 'rgba(255,255,255,0.12)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)' }}
-          >
-            View Demo
+            Create Free Account
           </button>
         </div>
       </div>
@@ -2191,148 +2087,55 @@ function CTASection({ onNavigate }: { onNavigate: (p: Page) => void }) {
   )
 }
 
+// ─── Privacy policy ───────────────────────────────────────────────────────────
+function PrivacyPolicySection() {
+  return (
+    <section id="privacy" style={{ background: 'white', borderTop: '1px solid var(--color-border)', padding: '56px 0', scrollMarginTop: 72 }}>
+      <div className="max-w-[960px] mx-auto px-8">
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-primary)', marginBottom: 8 }}>Privacy</p>
+        <div className="flex flex-wrap items-end justify-between gap-3" style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', color: 'var(--color-text-primary)' }}>Privacy Policy</h2>
+          <p style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>Last updated: 14 August 2026</p>
+        </div>
+        <div className="grid grid-cols-3 gap-6">
+          {[
+            ['Information stored', 'StudyFlow stores the account details you provide, including your name, email, course and year of study, together with modules, assignments and study-session data you create.'],
+            ['How it is used', 'Your information is used to provide authentication and StudyFlow features. StudyFlow does not sell your personal information.'],
+            ['Your choices', 'You can update your profile and study data within StudyFlow. You can also delete your account and its associated study data from the Settings page.'],
+          ].map(([title, text]) => (
+            <div key={title} style={{ padding: 18, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-background)' }}>
+              <h3 style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 7 }}>{title}</h3>
+              <p style={{ fontSize: 12.5, lineHeight: 1.7, color: 'var(--color-text-secondary)' }}>{text}</p>
+            </div>
+          ))}
+        </div>
+        <p style={{ marginTop: 18, fontSize: 11.5, lineHeight: 1.6, color: 'var(--color-text-muted)' }}>Technical hosting and network providers may process limited connection data when delivering the service. For privacy questions, contact the StudyFlow administrator.</p>
+      </div>
+    </section>
+  )
+}
+
 // ─── Footer ───────────────────────────────────────────────────────────────────
 function Footer() {
-  const cols = [
-    {
-      heading: 'Product',
-      links: ['Features', 'How It Works', 'Pricing', 'Changelog', 'Roadmap'],
-    },
-    {
-      heading: 'Company',
-      links: ['About', 'Blog', 'Careers', 'Press', 'Contact'],
-    },
-    {
-      heading: 'Support',
-      links: ['Help Centre', 'Getting Started', 'Community', 'Status', 'Report a Bug'],
-    },
-  ]
-
-  const social = [
-    {
-      label: 'Twitter / X',
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.74l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-        </svg>
-      ),
-    },
-    {
-      label: 'LinkedIn',
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-        </svg>
-      ),
-    },
-    {
-      label: 'GitHub',
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
-        </svg>
-      ),
-    },
-    {
-      label: 'Instagram',
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" />
-        </svg>
-      ),
-    },
-  ]
-
   return (
     <footer style={{ background: '#0f1021', borderTop: '1px solid #1e2140' }}>
-      {/* Main footer */}
-      <div className="max-w-[1280px] mx-auto px-8 pt-16 pb-12">
-        <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr] gap-12">
-
-          {/* Brand column */}
-          <div>
-            <div className="flex items-center gap-2.5 mb-5">
-              <div
-                className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #4338ca 0%, #7c3aed 100%)' }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" fill="white" />
-                  <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-                  <path d="M2 12l10 5 10-5" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </div>
-              <span style={{ fontSize: '1rem', fontWeight: 700, color: 'white', letterSpacing: '-0.01em' }}>StudyFlow</span>
+      <div className="sf-footer-inner max-w-[1280px] mx-auto px-8 py-7 flex items-center justify-between gap-6">
+        <div className="sf-footer-brand">
+          <div className="sf-footer-brand-title flex items-center gap-2.5">
+            <div className="w-8 h-8 shrink-0 rounded-[var(--radius-sm)] flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4338ca 0%, #7c3aed 100%)' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" fill="white" />
+                <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                <path d="M2 12l10 5 10-5" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" />
+              </svg>
             </div>
-            <p style={{ fontSize: '0.875rem', color: '#6b7280', lineHeight: 1.7, maxWidth: '280px', marginBottom: '24px' }}>
-              The academic productivity workspace built for university students. Stay organised, study smarter.
-            </p>
-            {/* Social icons */}
-            <div className="flex items-center gap-3">
-              {social.map((s) => (
-                <a
-                  key={s.label}
-                  href="#"
-                  aria-label={s.label}
-                  className="w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center transition-all duration-150 no-underline"
-                  style={{ background: '#1e2140', color: '#6b7280' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = 'white'; e.currentTarget.style.background = '#2d3158' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = '#1e2140' }}
-                >
-                  {s.icon}
-                </a>
-              ))}
-            </div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>StudyFlow</span>
           </div>
-
-          {/* Link columns */}
-          {cols.map((col) => (
-            <div key={col.heading}>
-              <p style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9ca3af', marginBottom: '16px' }}>
-                {col.heading}
-              </p>
-              <ul className="flex flex-col gap-3">
-                {col.links.map((link) => (
-                  <li key={link}>
-                    <a
-                      href="#"
-                      className="no-underline transition-colors duration-150"
-                      style={{ fontSize: '0.875rem', color: '#6b7280' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = 'white' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = '#6b7280' }}
-                    >
-                      {link}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <div className="sf-footer-tagline" style={{ marginTop: 4, fontSize: 11.5, color: '#6b7280' }}>Free academic planning for university students.</div>
         </div>
-      </div>
-
-      {/* Bottom bar */}
-      <div
-        className="max-w-[1280px] mx-auto px-8 py-5 flex items-center justify-between"
-        style={{ borderTop: '1px solid #1e2140' }}
-      >
-        <p style={{ fontSize: '0.8125rem', color: '#4b5563' }}>
-          © 2025 StudyFlow. All rights reserved. This is a fictional portfolio project — not a real product.
-        </p>
-        <div className="flex items-center gap-6">
-          {['Privacy Policy', 'Terms of Service', 'Accessibility'].map((l) => (
-            <a
-              key={l}
-              href="#"
-              className="no-underline transition-colors duration-150"
-              style={{ fontSize: '0.8125rem', color: '#4b5563' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#9ca3af' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#4b5563' }}
-            >
-              {l}
-            </a>
-          ))}
-        </div>
+        <a href="#privacy" className="no-underline transition-colors duration-150" style={{ fontSize: 12.5, color: '#9ca3af' }} onMouseEnter={(event) => { event.currentTarget.style.color = 'white' }} onMouseLeave={(event) => { event.currentTarget.style.color = '#9ca3af' }}>
+          Privacy Policy
+        </a>
       </div>
     </footer>
   )
@@ -2895,19 +2698,21 @@ function RegisterPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [degree, setDegree] = useState('')
+  const [customCourse, setCustomCourse] = useState('')
   const [year, setYear] = useState('')
   const [terms, setTerms] = useState(false)
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
   const strength = passwordStrength(password)
+  const selectedCourse = degree === 'Other' ? customCourse.trim() : degree
 
   const errors = {
     name: submitted && !name.trim() ? 'Enter your full name.' : undefined,
     email: submitted && !/^\S+@\S+\.\S+$/.test(email) ? 'Enter a valid email address.' : undefined,
     password: submitted && password.length < 8 ? 'Use at least 8 characters.' : undefined,
     confirm: submitted && confirm !== password ? 'Passwords do not match.' : undefined,
-    degree: submitted && !degree ? 'Select your course.' : undefined,
+    degree: submitted && !selectedCourse ? (degree === 'Other' ? 'Enter your course.' : 'Select your course.') : undefined,
     year: submitted && !year ? 'Select your year of study.' : undefined,
   }
 
@@ -2915,14 +2720,14 @@ function RegisterPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
     e.preventDefault()
     setSubmitted(true)
     setError('')
-    const invalid = !name.trim() || !/^\S+@\S+\.\S+$/.test(email) || password.length < 8 || confirm !== password || !degree || !year
+    const invalid = !name.trim() || !/^\S+@\S+\.\S+$/.test(email) || password.length < 8 || confirm !== password || !selectedCourse || !year
     if (invalid || !terms) {
       if (!terms) setError('You must accept the terms and privacy notice.')
       return
     }
     try {
       setLoading(true)
-      await register({ name, email, password, course: degree, yearOfStudy: year })
+      await register({ name, email, password, course: selectedCourse, yearOfStudy: year })
       onNavigate('dashboard')
     } catch (err) {
       setError(readableApiError(err))
@@ -3120,7 +2925,21 @@ return (
               required
             />
 
-            {(errors.degree || errors.year) && (
+            {degree === 'Other' && (
+              <div className="col-span-2">
+                <Field
+                  id="reg-custom-course"
+                  label="Your course"
+                  value={customCourse}
+                  onChange={setCustomCourse}
+                  placeholder="Type the name of your course"
+                  required
+                  error={errors.degree}
+                />
+              </div>
+            )}
+
+            {(degree !== 'Other' ? errors.degree : errors.year) && (
               <p
                 className="col-span-2"
                 style={{
@@ -3128,7 +2947,7 @@ return (
                   color: 'var(--color-error)',
                 }}
               >
-                {errors.degree || errors.year}
+                {degree !== 'Other' ? errors.degree : errors.year}
               </p>
             )}
 
@@ -3304,14 +3123,14 @@ function PageHeader({
 }) {
   return (
     <header
-      className="flex items-center justify-between gap-4 px-8 py-5 shrink-0"
+      className={`sf-page-header flex items-center justify-between gap-4 px-8 py-5 shrink-0 ${action ? 'sf-page-header-has-action' : ''}`}
       style={{
         minHeight: '78px',
         background: 'white',
         borderBottom: '1px solid var(--color-border)',
       }}
     >
-      <div className="min-w-0">
+      <div className="sf-page-header-copy min-w-0">
         <h1
           style={{
             fontSize: '20px',
@@ -3337,7 +3156,7 @@ function PageHeader({
         )}
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="sf-page-header-actions flex items-center gap-3 shrink-0">
         <NotificationBell />
         {action}
       </div>
@@ -3438,7 +3257,7 @@ function NotificationBell() {
       <button onClick={() => setOpen((v) => !v)} aria-label="Notifications" className="flex items-center justify-center rounded-[var(--radius-md)]" style={{ width: 36, height: 36, background: open ? 'var(--color-border)' : 'white', border: '1.5px solid var(--color-border)', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
         <Icon size={16}>{Icons.bell}</Icon>
       </button>
-      {open && <div style={{ position: 'absolute', right: 0, top: 44, width: 290, zIndex: 30, background: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-dropdown)', padding: 18 }}><p style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Notifications</p><p style={{ fontSize: 12, color: 'var(--color-text-muted)', lineHeight: 1.5 }}>No notifications yet. Scheduled email reminders require SMTP configuration.</p></div>}
+      {open && <div style={{ position: 'absolute', right: 0, top: 44, width: 290, zIndex: 30, background: 'white', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-dropdown)', padding: 18 }}><p style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Notifications</p><p style={{ fontSize: 12, color: 'var(--color-text-muted)', lineHeight: 1.5 }}>No notifications yet.</p></div>}
     </div>
   )
 }
@@ -3470,25 +3289,25 @@ function DashboardPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
   return (
     <DashShell activeNav="overview" onNavChange={(n) => navigateFromDash(n, onNavigate)} onNavigate={onNavigate}>
       <PageHeader title={`Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, ${user?.name?.split(' ')[0] || 'Student'}`} subtitle={new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} action={<Button size="sm" onClick={() => onNavigate('assignments-page')}>Add Assignment</Button>} />
-      <main className="flex-1 overflow-y-auto px-8 py-6">
+      <main className="sf-dashboard-main flex-1 overflow-y-auto px-8 py-6">
         {error && <p style={{ padding: 12, background: 'var(--color-error-light)', color: 'var(--color-error)', borderRadius: 8, marginBottom: 16 }}>{error}</p>}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="sf-dashboard-stats grid grid-cols-4 gap-4 mb-6">
           {[
             ['Active assignments', loading ? '…' : String(active.length)],
             ['Due this week', loading ? '…' : String(dueWeek)],
             ['Hours studied', loading ? '…' : (studiedMinutes / 60).toFixed(1)],
             ['Completion rate', loading ? '…' : `${completion}%`],
-          ].map(([label, value]) => <div key={label} className="bg-white rounded-[var(--radius-lg)] p-5" style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}><p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{label}</p><p style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-text-primary)', marginTop: 8 }}>{value}</p></div>)}
+          ].map(([label, value]) => <div key={label} className="sf-dashboard-stat-card bg-white rounded-[var(--radius-lg)] p-5" style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}><p className="sf-dashboard-stat-label" style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{label}</p><p className="sf-dashboard-stat-value" style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-text-primary)', marginTop: 8 }}>{value}</p></div>)}
         </div>
-        <div className="grid grid-cols-[2fr_1fr] gap-6">
-          <div className="bg-white rounded-[var(--radius-lg)] overflow-hidden" style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+        <div className="sf-dashboard-columns grid grid-cols-[2fr_1fr] gap-6">
+          <div className="sf-dashboard-deadlines bg-white rounded-[var(--radius-lg)] overflow-hidden" style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
             <div className="flex items-center justify-between p-5" style={{ borderBottom: '1px solid var(--color-border)' }}><h2 style={{ fontSize: 15, fontWeight: 700 }}>Upcoming deadlines</h2><button onClick={() => onNavigate('assignments-page')} style={{ border: 'none', background: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontWeight: 600 }}>View all</button></div>
             {upcoming.length === 0 && !loading ? <EmptyState onAdd={() => onNavigate('assignments-page')} /> : upcoming.map((r) => {
               const a = toAssignment(r)
-              return <button key={r.id} onClick={() => { localStorage.setItem('studyflow_selected_assignment', r.id); onNavigate('assignment-detail') }} className="w-full flex items-center gap-4 p-4 text-left" style={{ background: 'white', border: 'none', borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}><span style={{ width: 8, height: 36, borderRadius: 8, background: a.moduleColor }} /><div style={{ flex: 1 }}><p style={{ fontSize: 13.5, fontWeight: 700 }}>{a.title}</p><p style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>{a.moduleCode} · {a.due}</p></div><StatusLabel variant={a.status === 'Completed' ? 'success' : a.status === 'Overdue' ? 'error' : 'primary'}>{a.status}</StatusLabel></button>
+              return <button key={r.id} onClick={() => { localStorage.setItem('studyflow_selected_assignment', r.id); onNavigate('assignment-detail') }} className="sf-dashboard-deadline-row w-full flex items-center gap-4 p-4 text-left" style={{ background: 'white', border: 'none', borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}><span style={{ width: 8, height: 36, borderRadius: 8, background: a.moduleColor, flexShrink: 0 }} /><div className="min-w-0" style={{ flex: 1 }}><p style={{ fontSize: 13.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</p><p style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>{a.moduleCode} · {a.due}</p></div><span className="sf-dashboard-deadline-status"><StatusLabel variant={a.status === 'Completed' ? 'success' : a.status === 'Overdue' ? 'error' : 'primary'}>{a.status}</StatusLabel></span></button>
             })}
           </div>
-          <div className="bg-white rounded-[var(--radius-lg)] p-5" style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+          <div className="sf-dashboard-sessions bg-white rounded-[var(--radius-lg)] p-5" style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
             <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>Next study sessions</h2>
             {sessions.filter((s) => new Date(s.start_at).getTime() >= Date.now()).slice(0,4).map((s) => <div key={s.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--color-border)' }}><p style={{ fontSize: 13, fontWeight: 700 }}>{s.title}</p><p style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>{new Date(s.start_at).toLocaleString('en-GB')} · {s.planned_minutes} min</p></div>)}
             {!loading && sessions.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: 13 }}>No sessions planned yet.</p>}
@@ -3691,7 +3510,7 @@ function AssignmentGridCard({ a, openMenu, onMenuToggle }: {
 
   return (
     <div
-      className="flex flex-col rounded-[var(--radius-lg)] bg-white transition-all duration-200"
+      className="sf-assignment-card flex flex-col rounded-[var(--radius-lg)] bg-white transition-all duration-200"
       style={{
         border: a.status === 'Overdue' ? '1.5px solid #fca5a5' : '1px solid var(--color-border)',
         boxShadow: 'var(--shadow-card)',
@@ -3702,11 +3521,11 @@ function AssignmentGridCard({ a, openMenu, onMenuToggle }: {
       {/* Top colour stripe */}
       <div style={{ height: '4px', background: a.moduleColor, borderRadius: '14px 14px 0 0' }} />
 
-      <div className="flex flex-col gap-4 p-5">
+      <div className="sf-assignment-card-body flex flex-col gap-4 p-5">
         {/* Header row */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
+            <div className="sf-assignment-card-badges flex items-center gap-2 mb-1.5">
               <span
                 style={{
                   fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '5px',
@@ -3757,8 +3576,8 @@ function AssignmentGridCard({ a, openMenu, onMenuToggle }: {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
-          <div className="flex items-center gap-1.5">
+        <div className="sf-assignment-card-footer flex items-center justify-between gap-3 pt-1" style={{ borderTop: '1px solid var(--color-border)' }}>
+          <div className="flex min-w-0 items-center gap-1.5">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={a.status === 'Overdue' ? 'var(--color-error)' : 'var(--color-text-muted)'} strokeWidth="2" strokeLinecap="round">
               <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="3" y1="10" x2="21" y2="10" />
               <line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" />
@@ -3771,7 +3590,7 @@ function AssignmentGridCard({ a, openMenu, onMenuToggle }: {
             </span>
           </div>
           <span
-            className="inline-flex items-center gap-1"
+            className="sf-assignment-card-status inline-flex shrink-0 items-center gap-1"
             style={{
               fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '20px',
               background: STATUS_STYLE[a.status].bg, color: STATUS_STYLE[a.status].color,
@@ -4107,13 +3926,6 @@ function DashShell({
             </div>
           ))}
 
-          <div className="mt-2 p-4 rounded-[var(--radius-md)]" style={{ background: 'linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-secondary-light) 100%)', border: '1px solid var(--color-indigo-200)' }}>
-            <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '4px' }}>Upgrade to Pro</p>
-            <p style={{ fontSize: '11px', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '10px' }}>Unlock analytics, calendar sync, and priority reminders.</p>
-            <button className="w-full h-8 rounded-[var(--radius-sm)] text-white font-semibold cursor-pointer" style={{ fontSize: '11px', background: 'var(--color-primary)', border: 'none' }} onClick={() => onNavigate('landing')}>
-              View Plans
-            </button>
-          </div>
         </nav>
 
         <div className="shrink-0 px-3 py-3" style={{ borderTop: '1px solid var(--color-border)' }}>
@@ -4145,22 +3957,10 @@ type ModalDemo = 'default' | 'filled' | 'error' | 'saving' | 'saved'
 
 interface SubTask { id: number; text: string; done: boolean }
 
-const MODULE_OPTIONS = [
-  { code: 'COMP3801', name: 'Database Systems',            color: '#3730a3' },
-  { code: 'COMP3820', name: 'Cybersecurity',               color: '#7c3aed' },
-  { code: 'COMP3900', name: 'Web Development',             color: '#0891b2' },
-  { code: 'BUSN2100', name: 'Business Computing',          color: '#d97706' },
-  { code: 'COMP2521', name: 'Algorithms & Data Structures',color: '#16a34a' },
-  { code: 'DSGN3010', name: 'UX & Interaction Design',     color: '#db2777' },
-  { code: 'COMP3231', name: 'Operating Systems',           color: '#059669' },
-  { code: 'COMP4418', name: 'Intro to Machine Learning',   color: '#6366f1' },
-]
-
 const REMINDER_OPTIONS = ['No reminder', '1 hour before', '1 day before', '3 days before', '1 week before']
 
 const FILLED_DEFAULTS = {
   title: 'Operating Systems Lab Report',
-  module: 'COMP3231',
   description: 'Document your implementation of a multi-threading scheduler in C, with a detailed performance analysis section benchmarking against the default OS scheduler.',
   dueDate: '2025-11-05',
   dueTime: '23:59',
@@ -4228,7 +4028,192 @@ function textareaStyle(hasError: boolean): React.CSSProperties {
   }
 }
 
-function AddAssignmentModal({ onClose, onSaved }: { onClose: () => void; onSaved: (a: AssignmentRecord) => void }) {
+function sortModules(records: ModuleRecord[]): ModuleRecord[] {
+  return [...records].sort((a, b) => a.name.localeCompare(b.name) || a.code.localeCompare(b.code))
+}
+
+function ManageModulesModal({
+  modules,
+  loading,
+  loadError,
+  onModulesChange,
+  onClose,
+}: {
+  modules: ModuleRecord[]
+  loading: boolean
+  loadError: string
+  onModulesChange: (modules: ModuleRecord[]) => void
+  onClose: () => void
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [name, setName] = useState('')
+  const [code, setCode] = useState('')
+  const [color, setColor] = useState('#3730a3')
+  const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [error, setError] = useState('')
+
+  const resetForm = () => {
+    setEditingId(null)
+    setName('')
+    setCode('')
+    setColor('#3730a3')
+    setError('')
+  }
+
+  const startEdit = (moduleRecord: ModuleRecord) => {
+    setEditingId(moduleRecord.id)
+    setName(moduleRecord.name)
+    setCode(moduleRecord.code)
+    setColor(moduleRecord.color)
+    setError('')
+  }
+
+  const saveModule = async () => {
+    const cleanName = name.trim()
+    const cleanCode = code.trim()
+    if (!cleanName || !cleanCode) {
+      setError('Enter both a module name and code.')
+      return
+    }
+    if (!/^#[0-9a-f]{6}$/i.test(color)) {
+      setError('Choose a valid six-digit colour, such as #3730a3.')
+      return
+    }
+
+    try {
+      setSaving(true)
+      setError('')
+      if (editingId) {
+        const updated = await updateModuleRecord(editingId, { name: cleanName, code: cleanCode, color })
+        onModulesChange(sortModules(modules.map((item) => item.id === updated.id ? updated : item)))
+      } else {
+        const created = await createModuleRecord({ name: cleanName, code: cleanCode, color })
+        onModulesChange(sortModules([...modules, created]))
+      }
+      resetForm()
+    } catch (moduleError) {
+      setError(readableApiError(moduleError))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const removeModule = async (moduleRecord: ModuleRecord) => {
+    if (!window.confirm(`Delete ${moduleRecord.code} - ${moduleRecord.name}? Existing assignments will keep their saved module details.`)) return
+    try {
+      setDeletingId(moduleRecord.id)
+      setError('')
+      await deleteModuleRecord(moduleRecord.id)
+      onModulesChange(modules.filter((item) => item.id !== moduleRecord.id))
+      if (editingId === moduleRecord.id) resetForm()
+    } catch (moduleError) {
+      setError(readableApiError(moduleError))
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(26,29,46,0.56)', backdropFilter: 'blur(4px)' }} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Manage modules"
+        onKeyDown={(event) => { if (event.key === 'Escape') onClose() }}
+        style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, pointerEvents: 'none' }}
+      >
+        <div
+          onClick={(event) => event.stopPropagation()}
+          style={{ width: '100%', maxWidth: 780, maxHeight: 'calc(100vh - 48px)', overflowY: 'auto', background: 'white', borderRadius: 'var(--radius-xl)', boxShadow: '0 24px 64px rgba(26,29,46,0.24)', pointerEvents: 'auto' }}
+        >
+          <div className="flex items-center gap-3" style={{ padding: '20px 24px', borderBottom: '1px solid var(--color-border)' }}>
+            <div className="flex-1">
+              <h2 style={{ fontSize: 17, fontWeight: 800, letterSpacing: '-0.015em' }}>Manage modules</h2>
+              <p style={{ marginTop: 3, fontSize: 12.5, color: 'var(--color-text-muted)' }}>Create the modules available when adding an assignment.</p>
+            </div>
+            <button type="button" onClick={onClose} aria-label="Close module manager" className="flex items-center justify-center" style={{ width: 34, height: 34, borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--color-background)', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap" style={{ gap: 24, padding: 24 }}>
+            <div style={{ flex: '1 1 330px', minWidth: 0 }}>
+              <h3 style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 12 }}>Your modules</h3>
+              {loadError && <p role="alert" style={{ padding: 12, marginBottom: 12, borderRadius: 8, background: 'var(--color-error-light)', color: 'var(--color-error)', fontSize: 12 }}>{loadError}</p>}
+              {loading ? (
+                <p style={{ padding: 18, border: '1px solid var(--color-border)', borderRadius: 10, color: 'var(--color-text-muted)', fontSize: 12.5 }}>Loading modules...</p>
+              ) : modules.length === 0 ? (
+                <div style={{ padding: 20, border: '1.5px dashed var(--color-border-strong)', borderRadius: 10, background: 'var(--color-background)' }}>
+                  <p style={{ fontSize: 13, fontWeight: 700 }}>No modules yet</p>
+                  <p style={{ marginTop: 4, fontSize: 12, lineHeight: 1.5, color: 'var(--color-text-muted)' }}>Add your first module using the form.</p>
+                </div>
+              ) : (
+                <div style={{ border: '1px solid var(--color-border)', borderRadius: 10, overflow: 'hidden' }}>
+                  {modules.map((moduleRecord) => (
+                    <div key={moduleRecord.id} className="flex items-center gap-3" style={{ padding: '12px 14px', borderBottom: '1px solid var(--color-border)', background: editingId === moduleRecord.id ? 'var(--color-primary-light)' : 'white' }}>
+                      <span aria-hidden="true" style={{ width: 12, height: 36, flexShrink: 0, borderRadius: 999, background: moduleRecord.color }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{moduleRecord.name}</p>
+                        <p style={{ marginTop: 2, fontSize: 11.5, color: 'var(--color-text-muted)' }}>{moduleRecord.code}</p>
+                      </div>
+                      <button type="button" onClick={() => startEdit(moduleRecord)} disabled={saving || deletingId !== null} style={{ border: 'none', background: 'transparent', color: 'var(--color-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Edit</button>
+                      <button type="button" onClick={() => void removeModule(moduleRecord)} disabled={saving || deletingId !== null} style={{ border: 'none', background: 'transparent', color: 'var(--color-error)', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: deletingId === moduleRecord.id ? 0.6 : 1 }}>{deletingId === moduleRecord.id ? 'Deleting...' : 'Delete'}</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p style={{ marginTop: 10, fontSize: 11.5, lineHeight: 1.5, color: 'var(--color-text-muted)' }}>Deleting a module only removes it from future selection. Existing assignments retain their saved name, code and colour.</p>
+            </div>
+
+            <div style={{ flex: '1 1 280px', padding: 18, alignSelf: 'flex-start', borderRadius: 10, border: '1px solid var(--color-border)', background: 'var(--color-background)' }}>
+              <h3 style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 16 }}>{editingId ? 'Edit module' : 'Add a module'}</h3>
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div>
+                  <FieldLabel htmlFor="module-name" required>Module name</FieldLabel>
+                  <input id="module-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={160} placeholder="e.g. Database Systems" disabled={saving} style={inputStyle(false, { background: 'white' })} />
+                </div>
+                <div>
+                  <FieldLabel htmlFor="module-code" required>Module code</FieldLabel>
+                  <input id="module-code" value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} maxLength={40} placeholder="e.g. COMP3801" disabled={saving} style={inputStyle(false, { background: 'white' })} />
+                </div>
+                <div>
+                  <FieldLabel htmlFor="module-color" required>Module colour</FieldLabel>
+                  <div className="flex items-center gap-2">
+                    <input id="module-color" type="color" value={/^#[0-9a-f]{6}$/i.test(color) ? color : '#3730a3'} onChange={(event) => setColor(event.target.value)} disabled={saving} aria-label="Choose module colour" style={{ width: 44, height: 40, padding: 3, borderRadius: 8, border: '1.5px solid var(--color-border)', background: 'white', cursor: 'pointer' }} />
+                    <input value={color} onChange={(event) => setColor(event.target.value)} maxLength={7} aria-label="Module colour hex value" disabled={saving} style={inputStyle(false, { background: 'white', fontFamily: 'monospace' })} />
+                  </div>
+                </div>
+                {error && <p role="alert" style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--color-error)' }}>{error}</p>}
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => void saveModule()} disabled={saving || loading}>{saving ? 'Saving...' : editingId ? 'Save changes' : 'Add module'}</Button>
+                  {editingId && <Button size="sm" variant="ghost" onClick={resetForm} disabled={saving}>Cancel edit</Button>}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function AddAssignmentModal({
+  modules,
+  modulesLoading,
+  moduleError,
+  onManageModules,
+  onClose,
+  onSaved,
+}: {
+  modules: ModuleRecord[]
+  modulesLoading: boolean
+  moduleError: string
+  onManageModules: () => void
+  onClose: () => void
+  onSaved: (a: AssignmentRecord) => void
+}) {
   const [demo, setDemo] = useState<ModalDemo>('default')
 
   // Form state
@@ -4248,6 +4233,11 @@ function AddAssignmentModal({ onClose, onSaved }: { onClose: () => void; onSaved
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [toastVisible, setToastVisible] = useState(false)
+  const selectedMod = modules.find((item) => item.id === module)
+
+  useEffect(() => {
+    if (module && !modules.some((item) => item.id === module)) setModule('')
+  }, [module, modules])
 
   // Sync from demo tab
   const prevDemo = useState<ModalDemo>('default')[0]
@@ -4261,7 +4251,7 @@ function AddAssignmentModal({ onClose, onSaved }: { onClose: () => void; onSaved
       setTitle(''); setModule(''); setDescription(''); setDueDate(''); setDueTime(''); setPriority(''); setHours(''); setReminder('1 day before')
       setSubtasks([{ id: 1, text: '', done: false }])
     } else if (d === 'filled' || d === 'saving' || d === 'saved') {
-      setTitle(FILLED_DEFAULTS.title); setModule(FILLED_DEFAULTS.module); setDescription(FILLED_DEFAULTS.description)
+      setTitle(FILLED_DEFAULTS.title); setModule(modules[0]?.id || ''); setDescription(FILLED_DEFAULTS.description)
       setDueDate(FILLED_DEFAULTS.dueDate); setDueTime(FILLED_DEFAULTS.dueTime); setPriority(FILLED_DEFAULTS.priority)
       setHours(FILLED_DEFAULTS.hours); setReminder(FILLED_DEFAULTS.reminder)
       setSubtasks(FILLED_DEFAULTS.subtasks.map(s => ({ ...s })))
@@ -4277,7 +4267,7 @@ function AddAssignmentModal({ onClose, onSaved }: { onClose: () => void; onSaved
   // Validation
   const errors: Record<string, string> = {}
   if (!title.trim()) errors.title = 'Assignment title is required.'
-  if (!module) errors.module = 'Please select a module.'
+  if (!selectedMod) errors.module = 'Please select a module.'
   if (!dueDate) errors.dueDate = 'A due date is required.'
   if (!priority) errors.priority = 'Please select a priority level.'
 
@@ -4288,15 +4278,15 @@ function AddAssignmentModal({ onClose, onSaved }: { onClose: () => void; onSaved
   const handleSubmit = async () => {
     setTouched({ title: true, module: true, dueDate: true, priority: true })
     if (Object.keys(errors).length > 0) return
-    const mod = MODULE_OPTIONS.find((m) => m.code === module) || MODULE_OPTIONS[0]
+    if (!selectedMod) return
     try {
       setSaving(true)
       const dueAt = `${dueDate}T${dueTime || '23:59'}`
       const record = await createAssignmentRecord({
         title,
-        moduleName: mod.name,
-        moduleCode: mod.code,
-        moduleColor: mod.color,
+        moduleName: selectedMod.name,
+        moduleCode: selectedMod.code,
+        moduleColor: selectedMod.color,
         description: description || 'No description provided.',
         dueAt,
         priority: priority as AssignPriority,
@@ -4320,8 +4310,6 @@ function AddAssignmentModal({ onClose, onSaved }: { onClose: () => void; onSaved
 
   const toggleSubtask = (id: number) => setSubtasks((prev) => prev.map((s) => s.id === id ? { ...s, done: !s.done } : s))
   const removeSubtask = (id: number) => setSubtasks((prev) => prev.filter((s) => s.id !== id))
-
-  const selectedMod = MODULE_OPTIONS.find((m) => m.code === module)
 
   const demoTabs: { id: ModalDemo; label: string }[] = [
     { id: 'default', label: 'Empty form' },
@@ -4511,7 +4499,17 @@ function AddAssignmentModal({ onClose, onSaved }: { onClose: () => void; onSaved
 
             {/* Row 2: Module */}
             <div>
-              <FieldLabel htmlFor="af-module" required>Module</FieldLabel>
+              <div className="flex items-start justify-between gap-3">
+                <FieldLabel htmlFor="af-module" required>Module</FieldLabel>
+                <button
+                  type="button"
+                  onClick={onManageModules}
+                  disabled={saving || saved}
+                  style={{ marginTop: -2, padding: 0, border: 'none', background: 'transparent', color: 'var(--color-primary)', fontSize: 12, fontWeight: 700, cursor: saving || saved ? 'default' : 'pointer' }}
+                >
+                  Manage modules
+                </button>
+              </div>
               <div className="relative">
                 {selectedMod && (
                   <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '8px', height: '8px', borderRadius: '50%', background: selectedMod.color, zIndex: 1, pointerEvents: 'none' }} />
@@ -4523,12 +4521,12 @@ function AddAssignmentModal({ onClose, onSaved }: { onClose: () => void; onSaved
                   onBlur={() => handleBlur('module')}
                   aria-describedby={showErr('module') ? 'af-module-err' : undefined}
                   aria-invalid={showErr('module')}
-                  disabled={saving || saved}
+                  disabled={saving || saved || modulesLoading}
                   style={{ ...inputStyle(showErr('module'), { paddingLeft: selectedMod ? '28px' : '12px', appearance: 'none', cursor: 'pointer' }) }}
                 >
-                  <option value="">Select a module…</option>
-                  {MODULE_OPTIONS.map((m) => (
-                    <option key={m.code} value={m.code}>{m.code} – {m.name}</option>
+                  <option value="">{modulesLoading ? 'Loading modules...' : modules.length ? 'Select a module...' : 'No modules yet'}</option>
+                  {modules.map((moduleRecord) => (
+                    <option key={moduleRecord.id} value={moduleRecord.id}>{moduleRecord.code} - {moduleRecord.name}</option>
                   ))}
                 </select>
                 <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--color-text-muted)' }}>
@@ -4536,6 +4534,8 @@ function AddAssignmentModal({ onClose, onSaved }: { onClose: () => void; onSaved
                 </span>
               </div>
               {showErr('module') && <FieldError id="af-module-err" msg={errors.module} />}
+              {!showErr('module') && moduleError && <p role="alert" style={{ marginTop: 5, fontSize: 11.5, color: 'var(--color-error)' }}>{moduleError}</p>}
+              {!showErr('module') && !modulesLoading && !moduleError && modules.length === 0 && <p style={{ marginTop: 5, fontSize: 11.5, color: 'var(--color-text-muted)' }}>Add a module before saving your first assignment.</p>}
             </div>
 
             {/* Row 3: Description */}
@@ -4852,6 +4852,10 @@ function AssignmentsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [showModules, setShowModules] = useState(false)
+  const [modules, setModules] = useState<ModuleRecord[]>([])
+  const [modulesLoading, setModulesLoading] = useState(true)
+  const [moduleError, setModuleError] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -4862,6 +4866,12 @@ function AssignmentsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
     finally { setLoading(false) }
   }
   useEffect(() => { void load() }, [])
+  useEffect(() => {
+    fetchModules()
+      .then((records) => { setModules(records); setModuleError('') })
+      .catch((moduleLoadError) => setModuleError(readableApiError(moduleLoadError)))
+      .finally(() => setModulesLoading(false))
+  }, [])
 
   const assignments = useMemo(() => records.map(toAssignment), [records])
   const filtered = assignments.filter((a) => {
@@ -4872,19 +4882,20 @@ function AssignmentsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
 
   return (
     <DashShell activeNav="assignments" onNavChange={(n) => navigateFromDash(n, onNavigate)} onNavigate={onNavigate}>
-      <PageHeader title="Assignments" subtitle={`${assignments.length} total assignments`} action={<Button size="sm" onClick={() => setShowModal(true)}>Add Assignment</Button>} />
-      <main className="flex-1 overflow-y-auto px-8 py-6" onClick={() => setOpenMenu(null)}>
-        <div className="flex flex-wrap gap-3 mb-5">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search assignments…" className="h-10 px-4 rounded-[var(--radius-md)] text-sm" style={{ minWidth: 260, border: '1.5px solid var(--color-border)', outline: 'none' }} />
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="h-10 px-3 rounded-[var(--radius-md)]" style={{ border: '1.5px solid var(--color-border)' }}>{['All','Not Started','In Progress','Completed','Overdue'].map((x) => <option key={x}>{x}</option>)}</select>
-          <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="h-10 px-3 rounded-[var(--radius-md)]" style={{ border: '1.5px solid var(--color-border)' }}>{['All','High','Medium','Low'].map((x) => <option key={x}>{x}</option>)}</select>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}><Button variant={viewMode === 'grid' ? 'primary' : 'ghost'} size="sm" onClick={() => setViewMode('grid')}>Grid</Button><Button variant={viewMode === 'list' ? 'primary' : 'ghost'} size="sm" onClick={() => setViewMode('list')}>List</Button></div>
+      <PageHeader title="Assignments" subtitle={`${assignments.length} total assignments`} action={<div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => setShowModules(true)}>Manage modules</Button><Button size="sm" onClick={() => setShowModal(true)}>Add Assignment</Button></div>} />
+      <main className="sf-assignments-main flex-1 overflow-y-auto px-8 py-6" onClick={() => setOpenMenu(null)}>
+        <div className="sf-assignments-toolbar flex flex-wrap gap-3 mb-5">
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search assignments…" className="sf-assignments-search h-10 px-4 rounded-[var(--radius-md)] text-sm" style={{ minWidth: 260, border: '1.5px solid var(--color-border)', outline: 'none' }} />
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="sf-assignments-filter h-10 px-3 rounded-[var(--radius-md)]" style={{ border: '1.5px solid var(--color-border)' }}>{['All','Not Started','In Progress','Completed','Overdue'].map((x) => <option key={x}>{x}</option>)}</select>
+          <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="sf-assignments-filter h-10 px-3 rounded-[var(--radius-md)]" style={{ border: '1.5px solid var(--color-border)' }}>{['All','High','Medium','Low'].map((x) => <option key={x}>{x}</option>)}</select>
+          <div className="sf-assignment-view-toggle" style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}><Button variant={viewMode === 'grid' ? 'primary' : 'ghost'} size="sm" onClick={() => setViewMode('grid')}>Grid</Button><Button variant={viewMode === 'list' ? 'primary' : 'ghost'} size="sm" onClick={() => setViewMode('list')}>List</Button></div>
         </div>
         {error && <p style={{ padding: 12, background: 'var(--color-error-light)', color: 'var(--color-error)', borderRadius: 8, marginBottom: 16 }}>{error}</p>}
         {success && <p role="status" style={{ padding: 12, background: 'var(--color-success-light)', color: 'var(--color-success-foreground)', borderRadius: 8, marginBottom: 16 }}>{success}</p>}
-        {loading ? <Placeholder label="Loading assignments…" height={220} accent /> : filtered.length === 0 ? <div className="bg-white rounded-[var(--radius-lg)]" style={{ border: '1px solid var(--color-border)' }}><EmptyState onAdd={() => setShowModal(true)} /></div> : viewMode === 'grid' ? <div className="grid grid-cols-3 gap-5">{filtered.map((a) => <div key={a.id} onClick={() => openDetail(a.id)} style={{ cursor: 'pointer' }}><AssignmentGridCard a={a} openMenu={openMenu} onMenuToggle={(id) => setOpenMenu(openMenu === id ? null : id)} /></div>)}</div> : <div className="bg-white rounded-[var(--radius-lg)] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>{filtered.map((a) => <div key={a.id} onClick={() => openDetail(a.id)} style={{ cursor: 'pointer' }}><AssignmentListRow a={a} openMenu={openMenu} onMenuToggle={(id) => setOpenMenu(openMenu === id ? null : id)} /></div>)}</div>}
+        {loading ? <Placeholder label="Loading assignments…" height={220} accent /> : filtered.length === 0 ? <div className="bg-white rounded-[var(--radius-lg)]" style={{ border: '1px solid var(--color-border)' }}><EmptyState onAdd={() => setShowModal(true)} /></div> : viewMode === 'grid' ? <div className="sf-assignment-grid grid grid-cols-3 gap-5">{filtered.map((a) => <div key={a.id} onClick={() => openDetail(a.id)} style={{ cursor: 'pointer' }}><AssignmentGridCard a={a} openMenu={openMenu} onMenuToggle={(id) => setOpenMenu(openMenu === id ? null : id)} /></div>)}</div> : <div className="sf-assignment-list bg-white rounded-[var(--radius-lg)] overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>{filtered.map((a) => <div key={a.id} onClick={() => openDetail(a.id)} style={{ cursor: 'pointer' }}><AssignmentListRow a={a} openMenu={openMenu} onMenuToggle={(id) => setOpenMenu(openMenu === id ? null : id)} /></div>)}</div>}
       </main>
-      {showModal && <AddAssignmentModal onClose={() => setShowModal(false)} onSaved={(record) => { setRecords((prev) => [...prev, record]); window.dispatchEvent(new Event('studyflow:assignments-changed')); setSuccess('Assignment saved successfully.'); setShowModal(false); window.setTimeout(() => setSuccess(''), 3500) }} />}
+      {showModal && <AddAssignmentModal modules={modules} modulesLoading={modulesLoading} moduleError={moduleError} onManageModules={() => setShowModules(true)} onClose={() => setShowModal(false)} onSaved={(record) => { setRecords((prev) => [...prev, record]); window.dispatchEvent(new Event('studyflow:assignments-changed')); setSuccess('Assignment saved successfully.'); setShowModal(false); window.setTimeout(() => setSuccess(''), 3500) }} />}
+      {showModules && <ManageModulesModal modules={modules} loading={modulesLoading} loadError={moduleError} onModulesChange={(next) => { setModules(next); setModuleError('') }} onClose={() => setShowModules(false)} />}
     </DashShell>
   )
 }
@@ -5326,12 +5337,51 @@ function AnalyticsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
   const average = sessions.filter((s) => s.status === 'Completed').length ? Math.round(minutes / sessions.filter((s) => s.status === 'Completed').length) : 0
   const modules = Array.from(new Set(assignments.map((a) => a.module_name))).map((name) => ({ name, count: assignments.filter((a) => a.module_name === name).length }))
   const max = Math.max(1, ...modules.map((m) => m.count))
-  return <DashShell activeNav="analytics" onNavChange={(n) => navigateFromDash(n,onNavigate)} onNavigate={onNavigate}><PageHeader title="Analytics" subtitle="Live totals calculated from your saved data" /><main className="flex-1 overflow-y-auto px-8 py-6"><div className="grid grid-cols-4 gap-4 mb-6">{[['Study hours',(minutes/60).toFixed(1)],['Assignments completed',String(completed)],['Average session',`${average} min`],['Completion rate',assignments.length ? `${Math.round(completed/assignments.length*100)}%` : '0%']].map(([l,v]) => <div key={l} className="bg-white p-5 rounded-[var(--radius-lg)]" style={{ border:'1px solid var(--color-border)', boxShadow:'var(--shadow-card)' }}><p style={{fontSize:12,color:'var(--color-text-muted)'}}>{l}</p><p style={{fontSize:28,fontWeight:800,marginTop:8}}>{v}</p></div>)}</div><div className="grid grid-cols-2 gap-6"><div className="bg-white p-5 rounded-[var(--radius-lg)]" style={{border:'1px solid var(--color-border)'}}><h2 style={{fontSize:15,fontWeight:700,marginBottom:18}}>Assignments by module</h2>{modules.length ? modules.map((m) => <div key={m.name} style={{marginBottom:14}}><div className="flex justify-between" style={{fontSize:12}}><span>{m.name}</span><strong>{m.count}</strong></div><div style={{height:8,background:'var(--color-border)',borderRadius:999,marginTop:6}}><div style={{height:'100%',width:`${m.count/max*100}%`,background:'var(--color-primary)',borderRadius:999}} /></div></div>) : <p style={{color:'var(--color-text-muted)'}}>Add assignments to see analytics.</p>}</div><div className="bg-white p-5 rounded-[var(--radius-lg)]" style={{border:'1px solid var(--color-border)'}}><h2 style={{fontSize:15,fontWeight:700,marginBottom:18}}>Recent completed sessions</h2>{sessions.filter((s)=>s.status==='Completed').slice(-6).reverse().map((s)=><div key={s.id} style={{padding:'10px 0',borderBottom:'1px solid var(--color-border)'}}><p style={{fontSize:13,fontWeight:700}}>{s.title}</p><p style={{fontSize:11.5,color:'var(--color-text-muted)'}}>{s.actual_minutes} minutes · {new Date(s.start_at).toLocaleDateString('en-GB')}</p></div>)}</div></div></main></DashShell>
+  return (
+    <DashShell activeNav="analytics" onNavChange={(n) => navigateFromDash(n, onNavigate)} onNavigate={onNavigate}>
+      <PageHeader title="Analytics" subtitle="Live totals calculated from your saved data" />
+      <main className="sf-analytics-main flex-1 overflow-y-auto px-8 py-6">
+        <div className="sf-analytics-stats grid grid-cols-4 gap-4 mb-6">
+          {[
+            ['Study hours', (minutes / 60).toFixed(1)],
+            ['Assignments completed', String(completed)],
+            ['Average session', `${average} min`],
+            ['Completion rate', assignments.length ? `${Math.round(completed / assignments.length * 100)}%` : '0%'],
+          ].map(([label, value]) => (
+            <div key={label} className="sf-analytics-stat-card bg-white p-5 rounded-[var(--radius-lg)]" style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+              <p className="sf-analytics-stat-label" style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{label}</p>
+              <p className="sf-analytics-stat-value" style={{ fontSize: 28, fontWeight: 800, marginTop: 8 }}>{value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="sf-analytics-sections grid grid-cols-2 gap-6">
+          <div className="bg-white p-5 rounded-[var(--radius-lg)]" style={{ border: '1px solid var(--color-border)' }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 18 }}>Assignments by module</h2>
+            {modules.length ? modules.map((module) => (
+              <div key={module.name} style={{ marginBottom: 14 }}>
+                <div className="flex justify-between gap-3" style={{ fontSize: 12 }}><span className="min-w-0 break-words">{module.name}</span><strong>{module.count}</strong></div>
+                <div style={{ height: 8, background: 'var(--color-border)', borderRadius: 999, marginTop: 6 }}><div style={{ height: '100%', width: `${module.count / max * 100}%`, background: 'var(--color-primary)', borderRadius: 999 }} /></div>
+              </div>
+            )) : <p style={{ color: 'var(--color-text-muted)' }}>Add assignments to see analytics.</p>}
+          </div>
+          <div className="bg-white p-5 rounded-[var(--radius-lg)]" style={{ border: '1px solid var(--color-border)' }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, marginBottom: 18 }}>Recent completed sessions</h2>
+            {sessions.filter((session) => session.status === 'Completed').slice(-6).reverse().map((session) => (
+              <div key={session.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--color-border)' }}>
+                <p style={{ fontSize: 13, fontWeight: 700 }}>{session.title}</p>
+                <p style={{ fontSize: 11.5, color: 'var(--color-text-muted)' }}>{session.actual_minutes} minutes · {new Date(session.start_at).toLocaleDateString('en-GB')}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+    </DashShell>
+  )
 }
 
 // ─── Settings Page ────────────────────────────────────────────────────────────
 
-type SettingsTab = 'profile' | 'security' | 'notifications' | 'integrations' | 'accessibility' | 'appearance' | 'subscription' | 'account'
+type SettingsTab = 'profile' | 'security' | 'notifications' | 'integrations' | 'accessibility' | 'appearance' | 'account'
 
 const SETTINGS_TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { id: 'profile',        label: 'Profile',           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg> },
@@ -5340,7 +5390,6 @@ const SETTINGS_TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[]
   { id: 'integrations',   label: 'Calendar & Sync',   icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" /></svg> },
   { id: 'accessibility',  label: 'Accessibility',     icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="3" r="1" /><path d="M6 8l6-2 6 2" /><path d="M12 6v7" /><path d="M8 21l4-7 4 7" /></svg> },
   { id: 'appearance',     label: 'Appearance',        icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg> },
-  { id: 'subscription',   label: 'Subscription',      icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg> },
   { id: 'account',        label: 'Account',           icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg> },
 ]
 
@@ -5674,15 +5723,13 @@ function SettingsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
   const [name, setName] = useState(initial?.name || '')
   const [course, setCourse] = useState(initial?.course || '')
   const [year, setYear] = useState(initial?.year_of_study || '')
-  const [theme, setTheme] = useState<'light'|'dark'|'system'>((initial?.theme as any) || 'light')
   const [deadline, setDeadline] = useState(Boolean(initial?.deadline_reminders ?? true))
-  const [weekly, setWeekly] = useState(Boolean(initial?.weekly_report ?? true))
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
-  const save = async () => { try { setSaving(true); setError(''); await updateCurrentUser({ name, course, year_of_study: year, theme, deadline_reminders: deadline, weekly_report: weekly }); setMessage('Settings saved.') } catch(e){setError(readableApiError(e))} finally{setSaving(false)} }
+  const save = async () => { try { setSaving(true); setError(''); await updateCurrentUser({ name, course, year_of_study: year, deadline_reminders: deadline }); setMessage('Settings saved.') } catch(e){setError(readableApiError(e))} finally{setSaving(false)} }
   const remove = async () => { if (!window.confirm('Permanently delete your account and all of its data?')) return; try { await deleteCurrentUser(); onNavigate('landing') } catch(e){setError(readableApiError(e))} }
-  return <DashShell activeNav="settings" onNavChange={(n)=>navigateFromDash(n,onNavigate)} onNavigate={onNavigate}><PageHeader title="Settings" subtitle={initial?.email || ''} /><main className="flex-1 overflow-y-auto px-8 py-6"><div style={{maxWidth:720}}>{error&&<p style={{padding:12,background:'var(--color-error-light)',color:'var(--color-error)',borderRadius:8,marginBottom:16}}>{error}</p>}{message&&<p style={{padding:12,background:'var(--color-success-light)',color:'var(--color-success-foreground)',borderRadius:8,marginBottom:16}}>{message}</p>}<div className="bg-white rounded-[var(--radius-lg)] p-6 mb-5" style={{border:'1px solid var(--color-border)'}}><h2 style={{fontSize:15,fontWeight:700,marginBottom:18}}>Profile</h2><div className="grid grid-cols-2 gap-4"><Field id="settings-name" label="Full name" value={name} onChange={setName}/><Field id="settings-course" label="Course" value={course} onChange={setCourse}/><SelectField id="settings-year" label="Year" value={year} onChange={setYear} placeholder="Select" options={['1','2','3','4','Postgraduate','Other']}/><SelectField id="settings-theme" label="Theme" value={theme} onChange={(v)=>setTheme(v as any)} placeholder="Select" options={['light','dark','system']}/></div></div><div className="bg-white rounded-[var(--radius-lg)] p-6 mb-5" style={{border:'1px solid var(--color-border)'}}><h2 style={{fontSize:15,fontWeight:700,marginBottom:18}}>Notifications</h2><label className="flex items-center justify-between py-3"><span><strong style={{fontSize:13}}>Deadline reminders</strong><p style={{fontSize:12,color:'var(--color-text-muted)'}}>Store your preference for deadline emails.</p></span><input type="checkbox" checked={deadline} onChange={(e)=>setDeadline(e.target.checked)}/></label><label className="flex items-center justify-between py-3"><span><strong style={{fontSize:13}}>Weekly report</strong><p style={{fontSize:12,color:'var(--color-text-muted)'}}>Receive a weekly progress summary after SMTP is configured.</p></span><input type="checkbox" checked={weekly} onChange={(e)=>setWeekly(e.target.checked)}/></label></div><div className="flex gap-3"><Button onClick={save} disabled={saving}>{saving?'Saving…':'Save Changes'}</Button><Button variant="outline" onClick={()=>{logout();onNavigate('landing')}}>Log Out</Button><Button variant="danger" onClick={remove}>Delete Account</Button></div></div></main></DashShell>
+  return <DashShell activeNav="settings" onNavChange={(n)=>navigateFromDash(n,onNavigate)} onNavigate={onNavigate}><PageHeader title="Settings" subtitle={initial?.email || ''} /><main className="flex-1 overflow-y-auto px-8 py-6"><div style={{maxWidth:720}}>{error&&<p style={{padding:12,background:'var(--color-error-light)',color:'var(--color-error)',borderRadius:8,marginBottom:16}}>{error}</p>}{message&&<p style={{padding:12,background:'var(--color-success-light)',color:'var(--color-success-foreground)',borderRadius:8,marginBottom:16}}>{message}</p>}<div className="bg-white rounded-[var(--radius-lg)] p-6 mb-5" style={{border:'1px solid var(--color-border)'}}><h2 style={{fontSize:15,fontWeight:700,marginBottom:18}}>Profile</h2><div className="grid grid-cols-2 gap-4"><Field id="settings-name" label="Full name" value={name} onChange={setName}/><Field id="settings-course" label="Course" value={course} onChange={setCourse}/><SelectField id="settings-year" label="Year" value={year} onChange={setYear} placeholder="Select" options={['1','2','3','4','Postgraduate','Other']}/></div></div><div className="bg-white rounded-[var(--radius-lg)] p-6 mb-5" style={{border:'1px solid var(--color-border)'}}><h2 style={{fontSize:15,fontWeight:700,marginBottom:18}}>Notifications</h2><label className="flex items-center justify-between py-3"><span><strong style={{fontSize:13}}>Deadline reminders</strong><p style={{fontSize:12,color:'var(--color-text-muted)'}}>Choose whether deadline reminders are enabled.</p></span><input type="checkbox" checked={deadline} onChange={(e)=>setDeadline(e.target.checked)}/></label></div><div className="flex gap-3"><Button onClick={save} disabled={saving}>{saving?'Saving…':'Save Changes'}</Button><Button variant="outline" onClick={()=>{logout();onNavigate('landing')}}>Log Out</Button><Button variant="danger" onClick={remove}>Delete Account</Button></div></div></main></DashShell>
 }
 
 function PlannerPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
@@ -5799,9 +5846,9 @@ export default function App() {
       <div id="how-it-works"><HowItWorksSection /></div>
       <DashboardShowcaseSection />
       <TestimonialsSection />
-      <div id="pricing"><PricingSection onNavigate={navigate} /></div>
       <div id="faq"><FAQSection /></div>
       <CTASection onNavigate={navigate} />
+      <PrivacyPolicySection />
       <Footer />
     </div>
   )

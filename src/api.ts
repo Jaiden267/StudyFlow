@@ -30,6 +30,13 @@ export interface PBRecord {
   [key: string]: unknown
 }
 
+export interface ModuleRecord extends PBRecord {
+  owner: string
+  name: string
+  code: string
+  color: string
+}
+
 export interface AssignmentRecord extends PBRecord {
   owner: string
   title: string
@@ -241,6 +248,44 @@ interface ListResponse<T> {
 function ownerFilter(extra?: string): string {
   const base = `owner = "${ownerId()}"`
   return extra ? `${base} && (${extra})` : base
+}
+
+export async function listModules(): Promise<ModuleRecord[]> {
+  const query = new URLSearchParams({ perPage: '200', sort: 'name,code', filter: ownerFilter() })
+  const result = await api<ListResponse<ModuleRecord>>(`/collections/modules/records?${query}`)
+  return result.items
+}
+
+export async function createModule(input: { name: string; code: string; color: string }): Promise<ModuleRecord> {
+  return api<ModuleRecord>('/collections/modules/records', {
+    method: 'POST',
+    body: JSON.stringify({
+      owner: ownerId(),
+      name: input.name.trim(),
+      code: input.code.trim(),
+      color: input.color,
+    }),
+  })
+}
+
+export async function updateModule(
+  id: string,
+  changes: Partial<Pick<ModuleRecord, 'name' | 'code' | 'color'>>,
+): Promise<ModuleRecord> {
+  const payload = {
+    ...changes,
+    ...(changes.name === undefined ? {} : { name: changes.name.trim() }),
+    ...(changes.code === undefined ? {} : { code: changes.code.trim() }),
+    owner: ownerId(),
+  }
+  return api<ModuleRecord>(`/collections/modules/records/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function deleteModule(id: string): Promise<void> {
+  await api<void>(`/collections/modules/records/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
 export async function listAssignments(): Promise<AssignmentRecord[]> {
