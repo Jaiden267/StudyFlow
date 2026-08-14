@@ -20,4 +20,4 @@ The frontend's real authentication and database calls are in:
 - `src/api.ts`
 - `src/App.tsx`
 
-Google login, external calendar synchronization, SMS, payments, push notifications and assignment file uploads are deliberately not connected yet.
+
