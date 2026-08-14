@@ -1,6 +1,6 @@
 # StudyFlow functional self-hosted MVP
 
-This is the Figma Make export converted from a visual mock-up into a real React + PocketBase application for self-hosting on ZimaOS.
+This is the Figma Make export converted from a visual mock-up into a real React + PocketBase application for self-hosting on a Linux based server.
 
 Start here:
 
